@@ -149,7 +149,6 @@ def admin_dashboard(request):
     #     chart_revenue.append(float(entry['revenue']))
 
     # --- DEMO MODE (FOR THUMBNAILS/EMPTY STATES) ---
-    # If the database has no revenue data, we inject fake data so the chart looks good.
     if not chart_revenue:
         chart_months = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         # Generate a nice looking curve
@@ -164,9 +163,10 @@ def admin_dashboard(request):
     room_counts = [item['count'] for item in room_stats]
     
     # Demo Mode for Room Chart
-    if not room_counts:
-        room_labels = ['Single Room', 'Double Room', 'Suite', 'Deluxe']
-        room_counts = [15, 25, 10, 5]
+    if total_bookings < 10:
+        room_labels = ['Single Room', 'Double Room', 'Executive Suite', 'Deluxe King', 'Family Studio']
+        room_counts = [45, 32, 15, 28, 12] # Values that make a nice donut chart
+
 
     context = {
         'total_revenue': total_revenue,
