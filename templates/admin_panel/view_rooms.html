@@ -1,0 +1,86 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}Manage Rooms{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Room Management</h2>
+            <p class="text-gray-500 mt-1">Manage room inventory, pricing, and availability.</p>
+        </div>
+        <a href="{% url 'add_room' %}" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold rounded-lg shadow hover:shadow-lg transition flex items-center">
+            <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Add New Room
+        </a>
+    </div>
+
+    <!-- Rooms Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for room in rooms %}
+        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-xl transition group">
+            <div class="relative h-48 bg-gray-200">
+                {% if room.room_image %}
+                    <img src="{{ room.room_image.url }}" class="w-full h-full object-cover">
+                {% else %}
+                    <div class="flex items-center justify-center h-full text-gray-400">
+                        <i data-lucide="image-off" class="w-12 h-12"></i>
+                    </div>
+                {% endif %}
+                
+                <!-- Updated Status Badges -->
+                <div class="absolute top-2 right-2">
+                    {% if room.room_status == 'available' %}
+                        <span class="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full shadow-sm">Available</span>
+                    {% elif room.room_status == 'occupied' %}
+                        <span class="px-2 py-1 bg-blue-500 text-white text-xs font-bold rounded-full shadow-sm">Occupied</span>
+                    {% elif room.room_status == 'dirty' %}
+                        <span class="px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded-full shadow-sm">Dirty</span>
+                    {% else %}
+                        <span class="px-2 py-1 bg-gray-500 text-white text-xs font-bold rounded-full shadow-sm">Maintenance</span>
+                    {% endif %}
+                </div>
+                
+                <div class="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm font-semibold backdrop-blur-sm">
+                    Room {{ room.room_number }}
+                </div>
+            </div>
+
+            <div class="p-5">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-lg font-bold text-gray-800">{{ room.get_room_type_display }}</h3>
+                    <span class="text-blue-600 font-bold">${{ room.price_per_night }}<span class="text-gray-400 text-xs font-normal">/night</span></span>
+                </div>
+                
+                <p class="text-gray-500 text-sm mb-4 line-clamp-2">{{ room.description|default:"No description available." }}</p>
+                
+                <div class="flex items-center gap-4 text-sm text-gray-600 mb-4 border-t pt-3">
+                    <span class="flex items-center gap-1"><i data-lucide="users" class="w-4 h-4"></i> {{ room.capacity }} Guests</span>
+                </div>
+
+                <div class="flex gap-2">
+                    <a href="{% url 'edit_room' room.id %}" class="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg text-center font-medium hover:bg-blue-100 transition">
+                        Edit
+                    </a>
+                    <button onclick="confirmDeleteRoom({{ room.id }}, '{{ room.room_number }}')" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-12 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-dashed border-gray-300">
+            <i data-lucide="bed-double" class="w-12 h-12 mx-auto text-gray-300 mb-3"></i>
+            <p>No rooms added yet. Click "Add New Room" to get started.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function confirmDeleteRoom(id, number) {
+    if(confirm('Are you sure you want to delete Room ' + number + '?')) {
+        window.location.href = "/dashboard/admin/rooms/delete/" + id + "/";
+    }
+}
+</script>
+{% endblock %}

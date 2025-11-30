@@ -1,0 +1,254 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}Performance Analytics{% endblock %}
+
+{% block admin_content %}
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Dark Mode Wrapper with "Cyberpunk" styling -->
+<div class="bg-slate-900 min-h-screen p-8 rounded-xl text-white font-sans border border-slate-800 shadow-2xl">
+    
+    <!-- Header -->
+    <div class="flex justify-between items-end mb-10">
+        <div>
+            <h1 class="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 uppercase drop-shadow-lg">
+                Performance Overview
+            </h1>
+            <p class="text-slate-400 text-sm mt-2 flex items-center gap-2">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                Live System Metrics • HotelOS v2.0
+            </p>
+        </div>
+        <div class="flex gap-3">
+            <button class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 hover:border-blue-500/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition text-slate-300 flex items-center gap-2">
+                <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i> Last 7 Days
+            </button>
+           
+        </div>
+    </div>
+
+    <!-- KPI Cards Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        
+        <!-- Revenue Card -->
+        <div class="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 shadow-lg hover:shadow-blue-500/10 transition duration-300 group">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-blue-400 text-xs font-bold uppercase tracking-widest mb-1">Total Revenue</p>
+                    <h2 class="text-4xl font-black text-white mt-1 mb-2 tracking-tight">${{ total_revenue }}</h2>
+                </div>
+                <div class="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 group-hover:bg-blue-500/20 transition">
+                    <i data-lucide="dollar-sign" class="w-6 h-6 text-blue-400"></i>
+                </div>
+            </div>
+            <div class="flex items-center text-xs mt-4">
+                <span class="bg-green-500/10 text-green-400 px-2 py-1 rounded flex items-center gap-1 border border-green-500/20">
+                    <i data-lucide="trending-up" class="w-3 h-3"></i> 12.5%
+                </span>
+                <span class="text-slate-500 ml-2">vs last week</span>
+            </div>
+        </div>
+
+        <!-- Bookings Card -->
+        <div class="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 shadow-lg hover:shadow-purple-500/10 transition duration-300 group">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-purple-400 text-xs font-bold uppercase tracking-widest mb-1">Total Bookings</p>
+                    <h2 class="text-4xl font-black text-white mt-1 mb-2 tracking-tight">{{ total_bookings }}</h2>
+                </div>
+                <div class="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20 group-hover:bg-purple-500/20 transition">
+                    <i data-lucide="calendar-check" class="w-6 h-6 text-purple-400"></i>
+                </div>
+            </div>
+            <div class="flex items-center text-xs mt-4">
+                <span class="bg-purple-500/10 text-purple-400 px-2 py-1 rounded flex items-center gap-1 border border-purple-500/20">
+                    <i data-lucide="users" class="w-3 h-3"></i> Lifetime
+                </span>
+                <span class="text-slate-500 ml-2">Confirmed stays</span>
+            </div>
+        </div>
+
+        <!-- Occupancy Card -->
+        <div class="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 shadow-lg hover:shadow-orange-500/10 transition duration-300 group">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-orange-400 text-xs font-bold uppercase tracking-widest mb-1">Occupancy Rate</p>
+                    <h2 class="text-4xl font-black text-white mt-1 mb-2 tracking-tight">{{ occupancy_rate }}%</h2>
+                </div>
+                <div class="p-3 bg-orange-500/10 rounded-xl border border-orange-500/20 group-hover:bg-orange-500/20 transition">
+                    <i data-lucide="pie-chart" class="w-6 h-6 text-orange-400"></i>
+                </div>
+            </div>
+            <div class="w-full bg-slate-700/50 h-1.5 rounded-full mt-5 overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-orange-500 to-yellow-500" style="width: {{ occupancy_rate }}%"></div>
+            </div>
+        </div>
+
+        <!-- Active Guests Card -->
+        <div class="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 shadow-lg hover:shadow-emerald-500/10 transition duration-300 group">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">Active Guests</p>
+                    <h2 class="text-4xl font-black text-white mt-1 mb-2 tracking-tight">{{ active_guests }}</h2>
+                </div>
+                <div class="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 group-hover:bg-emerald-500/20 transition">
+                    <i data-lucide="user-check" class="w-6 h-6 text-emerald-400"></i>
+                </div>
+            </div>
+            <div class="flex items-center text-xs mt-4">
+                <span class="text-emerald-400 flex items-center gap-1 animate-pulse">
+                    <i data-lucide="activity" class="w-3 h-3"></i> Currently In-House
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Main Chart: Revenue Stream -->
+        <div class="lg:col-span-2 bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 shadow-lg">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-white">Revenue Trends</h3>
+                    <p class="text-xs text-slate-400">7-Day Income Overview</p>
+                </div>
+                <div class="flex gap-2">
+                    <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-700">
+                        <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <span class="text-xs text-slate-300">Income</span>
+                    </div>
+                </div>
+            </div>
+            <div class="h-80 w-full">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Secondary Chart: Room Popularity -->
+        <div class="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 shadow-lg flex flex-col">
+            <h3 class="text-lg font-bold text-white mb-2">Room Popularity</h3>
+            <p class="text-xs text-slate-400 mb-6">Most booked room types</p>
+            
+            <div class="flex-grow flex items-center justify-center relative">
+                <div class="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                    <span class="text-3xl font-bold text-white">{{ total_bookings }}</span>
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wide">Total</span>
+                </div>
+                <canvas id="roomChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Global Defaults for Cyberpunk look
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+
+    // --- 1. REVENUE CHART CONFIG ---
+    const ctxRev = document.getElementById('revenueChart').getContext('2d');
+    
+    // Vibrant Gradient
+    let gradient = ctxRev.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)'); // Bright Blue
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');   // Fade out
+
+    new Chart(ctxRev, {
+        type: 'line',
+        data: {
+            labels: {{ chart_months|safe }},
+            datasets: [{
+                label: 'Revenue ($)',
+                data: {{ chart_revenue|safe }},
+                borderColor: '#3b82f6',
+                backgroundColor: gradient,
+                borderWidth: 4,
+                pointBackgroundColor: '#1e293b',
+                pointBorderColor: '#60a5fa',
+                pointBorderWidth: 3,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                tension: 0.4, // Smooth curve
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleColor: '#fff',
+                    bodyColor: '#94a3b8',
+                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return '$ ' + context.parsed.y;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: 'rgba(51, 65, 85, 0.3)', borderDash: [5, 5] },
+                    ticks: { 
+                        callback: function(value) { return '$' + value; },
+                        font: { size: 11 }
+                    },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11 } },
+                    border: { display: false }
+                }
+            }
+        }
+    });
+
+    // --- 2. ROOM CHART CONFIG ---
+    const ctxRoom = document.getElementById('roomChart').getContext('2d');
+    new Chart(ctxRoom, {
+        type: 'doughnut',
+        data: {
+            labels: {{ chart_room_labels|safe }},
+            datasets: [{
+                data: {{ chart_room_counts|safe }},
+                backgroundColor: [
+                    '#8b5cf6', // Violet
+                    '#ec4899', // Pink
+                    '#3b82f6', // Blue
+                    '#10b981', // Emerald
+                    '#f59e0b'  // Amber
+                ],
+                borderWidth: 0,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%', // Thinner ring for modern look
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { 
+                        usePointStyle: true, 
+                        pointStyle: 'circle',
+                        padding: 20,
+                        font: { size: 11 }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

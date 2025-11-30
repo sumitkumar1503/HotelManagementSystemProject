@@ -1,0 +1,91 @@
+{% extends 'common/homebase.html' %}
+
+{% block content %}
+<div class="bg-white -mt-8">
+    <!-- Hero Section -->
+    <div class="relative bg-gray-900 py-24 sm:py-32">
+        <div class="absolute inset-0 overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" alt="Hotel Interior" class="h-full w-full object-cover object-center opacity-40">
+        </div>
+        <div class="relative mx-auto max-w-7xl px-6 lg:px-8 text-center">
+            <h1 class="text-4xl font-bold tracking-tight text-white sm:text-6xl">About Grand Hotel</h1>
+            <p class="mt-6 text-lg leading-8 text-gray-200 max-w-2xl mx-auto">
+                Redefining luxury and hospitality since 1995. Experience world-class comfort in the heart of the city.
+            </p>
+        </div>
+    </div>
+
+    <!-- Our Story Section -->
+    <div class="mx-auto max-w-7xl px-6 py-16 sm:py-24 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+                <div class="inline-block rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-600 mb-4">Our History</div>
+                <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">A Legacy of Luxury</h2>
+                <p class="mt-6 text-lg text-gray-600 leading-relaxed">
+                    Grand Hotel started with a simple vision: to create a sanctuary of peace and luxury for travelers. Over the past two decades, we have hosted thousands of guests, from world leaders to family vacationers, treating each one with our signature warmth and attention to detail.
+                </p>
+                <p class="mt-4 text-lg text-gray-600 leading-relaxed">
+                    Our architecture blends modern elegance with timeless tradition, offering a unique atmosphere that feels both grand and intimate. Whether you are here for business or leisure, our dedicated team is committed to making your stay unforgettable.
+                </p>
+            </div>
+            <div class="relative rounded-2xl overflow-hidden shadow-2xl">
+                <img src="https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Hotel Lobby" class="w-full h-full object-cover transform hover:scale-105 transition duration-500">
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="bg-indigo-900 py-16 sm:py-20">
+        <div class="mx-auto max-w-7xl px-6 lg:px-8">
+            <dl class="grid grid-cols-1 gap-x-8 gap-y-16 text-center lg:grid-cols-3">
+                <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+                    <dt class="text-base leading-7 text-indigo-200">Luxury Rooms</dt>
+                    <dd class="order-first text-3xl font-semibold tracking-tight text-white sm:text-5xl">100+</dd>
+                </div>
+                <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+                    <dt class="text-base leading-7 text-indigo-200">Guests Served</dt>
+                    <dd class="order-first text-3xl font-semibold tracking-tight text-white sm:text-5xl">50k+</dd>
+                </div>
+                <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+                    <dt class="text-base leading-7 text-indigo-200">Star Rating</dt>
+                    <dd class="order-first text-3xl font-semibold tracking-tight text-white sm:text-5xl">5.0</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Why Choose Us -->
+    <div class="mx-auto max-w-7xl px-6 py-16 sm:py-24 lg:px-8">
+        <div class="mx-auto max-w-2xl text-center mb-16">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Why Choose Us?</h2>
+            <p class="mt-4 text-lg text-gray-600">We go above and beyond to ensure your comfort and satisfaction.</p>
+        </div>
+        <div class="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3">
+            <!-- Feature 1 -->
+            <div class="relative pl-16">
+                <div class="absolute left-0 top-0 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg">
+                    <i class="fa-solid fa-wifi text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold leading-7 text-gray-900">High-Speed Wifi</h3>
+                <p class="mt-2 text-base leading-7 text-gray-600">Stay connected with our complimentary high-speed internet access throughout the property, perfect for remote work or streaming.</p>
+            </div>
+            <!-- Feature 2 -->
+            <div class="relative pl-16">
+                <div class="absolute left-0 top-0 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg">
+                    <i class="fa-solid fa-utensils text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold leading-7 text-gray-900">Fine Dining</h3>
+                <p class="mt-2 text-base leading-7 text-gray-600">Enjoy exquisite culinary delights prepared by our award-winning chefs available 24/7 via room service or in our restaurant.</p>
+            </div>
+            <!-- Feature 3 -->
+            <div class="relative pl-16">
+                <div class="absolute left-0 top-0 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg">
+                    <i class="fa-solid fa-spa text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold leading-7 text-gray-900">Luxury Spa</h3>
+                <p class="mt-2 text-base leading-7 text-gray-600">Relax and rejuvenate with our premium spa treatments, sauna, and wellness center designed to melt your stress away.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

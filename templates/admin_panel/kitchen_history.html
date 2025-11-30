@@ -1,0 +1,97 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}Kitchen Performance{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">Kitchen Performance</h2>
+        <p class="text-gray-500 mt-1">Delivery history and staff statistics.</p>
+    </div>
+
+    <!-- Stats / Leaderboard Section -->
+    <div class="mb-10">
+        <h3 class="text-lg font-bold text-gray-700 mb-4">Top Servers</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {% for stat in stats %}
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="relative">
+                    {% if stat.chef__user__profile_picture %}
+                        <img src="/media/{{ stat.chef__user__profile_picture }}" class="w-14 h-14 rounded-full object-cover border-2 border-orange-100">
+                    {% else %}
+                        <div class="w-14 h-14 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-lg">
+                            {{ stat.chef__user__username|default:"?"|first|upper }}
+                        </div>
+                    {% endif %}
+                    <div class="absolute -bottom-1 -right-1 bg-yellow-400 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white">
+                        #{{ forloop.counter }}
+                    </div>
+                </div>
+                <div>
+                    <p class="font-bold text-gray-800 text-lg">{{ stat.chef__user__first_name|default:stat.chef__user__username }}</p>
+                    <p class="text-gray-500 text-sm">{{ stat.total_delivered }} Orders Delivered</p>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-4 text-center py-4 text-gray-400 italic">No delivery stats available yet.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Detailed History Table -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h3 class="font-bold text-gray-700">Delivery Log</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white text-gray-500 text-xs uppercase font-semibold border-b">
+                        <th class="px-6 py-4">Date & Time</th>
+                        <th class="px-6 py-4">Room</th>
+                        <th class="px-6 py-4">Items</th>
+                        <th class="px-6 py-4">Delivered By (Staff)</th>
+                        <th class="px-6 py-4 text-right">Value</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for order in orders %}
+                    <tr class="hover:bg-orange-50 transition">
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            <div class="font-bold text-gray-800">{{ order.created_at|date:"M d, Y" }}</div>
+                            <div class="text-xs">{{ order.created_at|date:"H:i A" }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded font-bold text-xs border border-gray-200">
+                                Room {{ order.booking.room.room_number }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                            {% for item in order.items.all %}
+                                {{ item.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if order.chef %}
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="user-check" class="w-4 h-4 text-green-500"></i>
+                                    <span class="font-medium text-gray-700">{{ order.chef.user.username }}</span>
+                                </div>
+                            {% else %}
+                                <span class="text-gray-400 text-xs italic">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right font-bold text-orange-600">
+                            ${{ order.total_price }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="p-8 text-center text-gray-500">No history found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

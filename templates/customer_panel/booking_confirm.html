@@ -1,0 +1,16 @@
+{% extends 'customer_panel/customerbase.html' %}
+{% block customer_content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg mt-10 text-center">
+    <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+        <i class="fa-solid fa-check text-3xl"></i>
+    </div>
+    <h2 class="text-3xl font-bold text-gray-800 mb-4">Booking Initiated!</h2>
+    <p class="text-gray-600 text-lg mb-6">
+        You are about to book <strong>{{ room.get_room_type_display }} (Room {{ room.room_number }})</strong> for ${{ room.price_per_night }}/night.
+    </p>
+    <p class="text-sm text-gray-500 mb-8">
+        (This is a placeholder page. The full Booking Form with Date Selection will be implemented in the next step.)
+    </p>
+    <a href="{% url 'home' %}" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Back to Home</a>
+</div>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends 'common/homebase.html' %}
+{% block content %}
+
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <!-- Header -->
+        <div class="text-center">
+            <div class="mx-auto h-12 w-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 mb-4">
+                <i class="fa-solid fa-user-plus text-xl"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold text-gray-900">Create an Account</h2>
+            <p class="mt-2 text-sm text-gray-600">
+                Join Grand Hotel for exclusive bookings and offers.
+            </p>
+        </div>
+
+        <!-- Form -->
+        <form class="mt-8 space-y-6" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+                    <p class="text-sm text-red-700 font-bold">Please correct the errors below:</p>
+                    <ul class="list-disc ml-5 text-sm text-red-600 mt-1">
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <div class="rounded-md shadow-sm -space-y-px">
+                <!-- Username -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <input name="username" type="text" required class="appearance-none rounded-lg relative block w-full pl-10 px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Choose a username">
+                    </div>
+                </div>
+
+                <!-- Personal Info Grid -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                        <input name="first_name" type="text" class="appearance-none rounded-lg block w-full px-3 py-2 border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                        <input name="last_name" type="text" class="appearance-none rounded-lg block w-full px-3 py-2 border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+
+                <!-- Email & Mobile -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <div class="relative">
+                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-envelope"></i>
+                        </div>
+                        <input name="email" type="email" class="appearance-none rounded-lg block w-full pl-10 px-3 py-2 border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="you@example.com">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-phone"></i>
+                        </div>
+                        <input name="mobile" type="text" required class="appearance-none rounded-lg block w-full pl-10 px-3 py-2 border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="+1 (555) 000-0000">
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <textarea name="address" rows="2" class="appearance-none rounded-lg block w-full px-3 py-2 border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Your street address..."></textarea>
+                </div>
+
+                <!-- Password Fields (Rendered manually to ensure styling) -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <!-- We use the form field render but you can add classes manually in forms.py or here via widget tweaks. 
+                             For simplicity, we let Django render the input widget but wrap it for layout. -->
+                        {{ form.password1 }} 
+                    </div>
+                    
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        {{ form.password2 }}
+                    </div>
+                </div>
+
+                 <!-- Profile Picture -->
+                 <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Profile Picture (Optional)</label>
+                    <input type="file" name="profile_picture" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition">
+                </div>
+
+            </div>
+
+            <div>
+                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition transform hover:-translate-y-0.5">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fa-solid fa-arrow-right text-indigo-500 group-hover:text-indigo-400"></i>
+                    </span>
+                    Sign Up Now
+                </button>
+            </div>
+            
+            <div class="text-center mt-4">
+                <p class="text-sm text-gray-600">
+                    Already have an account? 
+                    <a href="{% url 'login' %}" class="font-medium text-indigo-600 hover:text-indigo-500">
+                        Login here
+                    </a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Simple CSS to style the Django generated password inputs to match Tailwind if widgets aren't set in forms.py -->
+<style>
+    input[type="password"] {
+        width: 100%;
+        padding-left: 2.5rem; /* Space for icon */
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid #d1d5db;
+    }
+    input[type="password"]:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 1px #6366f1;
+    }
+    ul.errorlist { display: none; } /* Hide default django error list since we show custom one at top */
+</style>
+
+{% endblock %}

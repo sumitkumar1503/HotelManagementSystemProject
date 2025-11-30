@@ -1,0 +1,173 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}Add New Employee{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Add New Employee</h2>
+            <p class="text-gray-500 mt-1">Create accounts for Receptionists, Kitchen Staff, etc.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition flex items-center">
+            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back
+        </a>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="p-1 bg-gradient-to-r from-blue-500 to-cyan-400"></div>
+        
+        <form method="post" enctype="multipart/form-data" class="p-8">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4">
+                    <p class="font-bold text-red-700">Please fix the following errors:</p>
+                    <ul class="list-disc ml-5 text-sm text-red-600">
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <!-- Grid Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Section 1: Login Credentials -->
+                <div class="md:col-span-2">
+                    <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4 flex items-center">
+                        <i data-lucide="lock" class="w-5 h-5 mr-2 text-blue-500"></i> Account Credentials
+                    </h3>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" name="username" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" required>
+                </div>
+                
+                <!-- Password fields are handled by Django form logic, usually rendered manually or via form loop. 
+                     Here we render the specific password fields from UserCreationForm -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    {{ form.password1 }} <!-- Renders standard Django password input -->
+                    <!-- Add tailwind classes to the rendered widget in forms.py if possible, or wrap it -->
+                </div>
+                <div>
+                     <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                     {{ form.password2 }}
+                </div>
+
+                <!-- Section 2: Personal Info -->
+                <div class="md:col-span-2 mt-4">
+                    <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4 flex items-center">
+                        <i data-lucide="user" class="w-5 h-5 mr-2 text-green-500"></i> Personal Information
+                    </h3>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <input type="text" name="first_name" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input type="text" name="last_name" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input type="email" name="email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                    <input type="text" name="mobile" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+
+                <!-- Section 3: Job Details -->
+                <div class="md:col-span-2 mt-4">
+                    <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4 flex items-center">
+                        <i data-lucide="briefcase" class="w-5 h-5 mr-2 text-purple-500"></i> Job Details
+                    </h3>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Job Role</label>
+                    <div class="relative">
+                        {{ form.job_type }} <!-- Renders select box -->
+                        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Monthly Salary ($)</label>
+                    <input type="number" name="salary" step="0.01" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ID Card Number</label>
+                    <input type="text" name="id_card_number" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Experience (Years)</label>
+                    <input type="number" name="years_of_experience" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Profile Picture</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i data-lucide="upload-cloud" class="w-8 h-8 text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                            </div>
+                            <input type="file" name="profile_picture" class="hidden" />
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mt-8 flex justify-end">
+                <button type="submit" class="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 flex items-center">
+                    <i data-lucide="plus-circle" class="w-5 h-5 mr-2"></i> Create Employee
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Helper styles to make standard Django widgets look like Tailwind inputs */
+    .form-input, input[type="text"], input[type="password"], input[type="email"], input[type="number"] {
+        width: 100%;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        border-width: 1px;
+        border-color: #e5e7eb;
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+    }
+    .form-input:focus, input:focus {
+        border-color: #3b82f6;
+        --tw-ring-color: #3b82f6;
+        --tw-ring-opacity: 0.5;
+        box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    }
+    select {
+        width: 100%;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+        background-color: white;
+    }
+</style>
+{% endblock %}

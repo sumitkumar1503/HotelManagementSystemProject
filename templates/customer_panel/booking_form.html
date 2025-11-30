@@ -1,0 +1,80 @@
+{% extends 'customer_panel/customerbase.html' %}
+{% block customer_content %}
+
+<div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+    
+    <!-- Room Summary Card -->
+    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-fit">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Confirm Booking</h2>
+        
+        {% if room.room_image %}
+            <img src="{{ room.room_image.url }}" class="w-full h-48 object-cover rounded-lg mb-4 shadow-sm">
+        {% endif %}
+        
+        <div class="space-y-3 text-sm">
+            <div class="flex justify-between border-b pb-2">
+                <span class="text-gray-500">Room</span>
+                <span class="font-bold text-gray-800">No. {{ room.room_number }} ({{ room.get_room_type_display }})</span>
+            </div>
+            <div class="flex justify-between border-b pb-2">
+                <span class="text-gray-500">Price</span>
+                <span class="font-bold text-indigo-600">${{ room.price_per_night }} / night</span>
+            </div>
+            <div class="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs mt-4">
+                <i class="fa-solid fa-circle-info mr-1"></i>
+                Note: Once you book this room, it will be marked as <strong>Occupied</strong> and no one else can book it.
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Form -->
+    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <h2 class="text-xl font-bold text-gray-800 mb-1">Select Dates</h2>
+        <p class="text-gray-500 text-sm mb-6">When will you be staying with us?</p>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+                    {{ form.errors }}
+                </div>
+            {% endif %}
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Check-In Date</label>
+                    {{ form.check_in }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Check-Out Date</label>
+                    {{ form.check_out }}
+                </div>
+            </div>
+
+            <div class="mt-8 pt-4 border-t">
+                <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-md transition transform hover:-translate-y-0.5">
+                    Confirm & Book Now
+                </button>
+                <a href="{% url 'room_list' %}" class="block text-center mt-4 text-gray-400 hover:text-gray-600 text-sm">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Styling for the Date Inputs */
+    .form-input {
+        width: 100%;
+        padding: 10px 15px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        outline: none;
+        color: #374151;
+    }
+    .form-input:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+</style>
+{% endblock %}

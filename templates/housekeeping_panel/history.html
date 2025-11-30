@@ -1,0 +1,55 @@
+{% extends 'housekeeping_panel/housekeepingbase.html' %} 
+
+{% block title %}My Cleaning History{% endblock %}
+
+{% block housekeeping_content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">My Cleaning History</h2>
+        <p class="text-gray-500 mt-1">Complete log of all rooms you have serviced.</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-700 text-sm uppercase tracking-wider border-b">
+                        <th class="p-4 font-semibold">Date Completed</th>
+                        <th class="p-4 font-semibold">Room</th>
+                        <th class="p-4 font-semibold">Room Type</th>
+                        <th class="p-4 font-semibold text-right">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for log in logs %}
+                    <tr class="hover:bg-blue-50 transition">
+                        <td class="p-4 text-sm text-gray-600">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="calendar-check" class="w-4 h-4 text-teal-500"></i>
+                                <span class="font-bold text-gray-800">{{ log.cleaned_at|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="ml-6 text-xs">{{ log.cleaned_at|date:"h:i A" }}</div>
+                        </td>
+                        <td class="p-4">
+                            <span class="px-3 py-1 bg-teal-50 text-teal-700 rounded-lg font-bold text-sm border border-teal-100">
+                                Room {{ log.room.room_number }}
+                            </span>
+                        </td>
+                        <td class="p-4 text-gray-600 text-sm">
+                            {{ log.room.get_room_type_display }}
+                        </td>
+                        <td class="p-4 text-right">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> Logged
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="p-8 text-center text-gray-500">No cleaning history found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

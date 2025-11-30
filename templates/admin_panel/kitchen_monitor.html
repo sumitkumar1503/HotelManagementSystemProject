@@ -1,0 +1,64 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}Kitchen Monitor (Admin){% endblock %}
+
+{% block admin_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">Kitchen Monitor</h2>
+        <p class="text-gray-500 mt-1">Live view of active room service orders.</p>
+    </div>
+
+    <!-- Active Orders Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for order in orders %}
+        <div class="bg-white rounded-xl shadow-md border-t-4 
+            {% if order.status == 'pending' %}border-red-500
+            {% elif order.status == 'cooking' %}border-yellow-500
+            {% elif order.status == 'ready' %}border-green-500{% endif %} 
+            overflow-hidden">
+            
+            <div class="p-5">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="font-bold text-gray-800 text-lg">Room {{ order.booking.room.room_number }}</h3>
+                    <span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">{{ order.created_at|time:"H:i" }}</span>
+                </div>
+
+                <div class="py-3 border-t border-b border-dashed border-gray-200 space-y-1 mb-4">
+                    {% for item in order.items.all %}
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-700">{{ item.name }}</span>
+                            <span class="text-gray-400">x1</span>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <span class="px-2 py-1 rounded text-xs font-bold uppercase
+                        {% if order.status == 'pending' %}bg-red-50 text-red-700
+                        {% elif order.status == 'cooking' %}bg-yellow-50 text-yellow-700
+                        {% else %}bg-green-50 text-green-700{% endif %}">
+                        {{ order.get_status_display }}
+                    </span>
+
+                    <!-- Admin Override Controls -->
+                    <div class="flex gap-1">
+                        {% if order.status == 'pending' %}
+                            <a href="{% url 'update_order_status' order.id 'cooking' %}" class="p-2 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200" title="Start Cooking"><i data-lucide="flame" class="w-4 h-4"></i></a>
+                        {% elif order.status == 'cooking' %}
+                            <a href="{% url 'update_order_status' order.id 'ready' %}" class="p-2 bg-green-100 text-green-700 rounded hover:bg-green-200" title="Mark Ready"><i data-lucide="bell" class="w-4 h-4"></i></a>
+                        {% elif order.status == 'ready' %}
+                            <a href="{% url 'update_order_status' order.id 'delivered' %}" class="p-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200" title="Mark Delivered"><i data-lucide="check" class="w-4 h-4"></i></a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-16 text-center bg-white rounded-xl border border-gray-100">
+            <i data-lucide="coffee" class="w-12 h-12 mx-auto text-gray-300 mb-2"></i>
+            <p class="text-gray-500">No active orders in the kitchen.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

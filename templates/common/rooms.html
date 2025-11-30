@@ -1,0 +1,64 @@
+{% extends 'common/homebase.html' %}
+{% block content %}
+
+<div class="text-center mb-12">
+    <h1 class="text-4xl font-extrabold text-gray-900 mb-4">Our Luxurious Accommodations</h1>
+    <p class="text-xl text-gray-500 max-w-2xl mx-auto">
+        Choose from our wide range of rooms and suites designed for your comfort.
+    </p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    {% for room in rooms %}
+    <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden hover:shadow-xl transition duration-300 flex flex-col">
+        <div class="relative h-64">
+            {% if room.room_image %}
+                <img src="{{ room.room_image.url }}" class="w-full h-full object-cover">
+            {% else %}
+                <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+                    <i class="fa-solid fa-bed text-4xl"></i>
+                </div>
+            {% endif %}
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                <h3 class="text-white text-xl font-bold">{{ room.get_room_type_display }}</h3>
+            </div>
+        </div>
+        
+        <div class="p-6 flex-grow flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-2xl font-bold text-indigo-600">${{ room.price_per_night }} <span class="text-sm text-gray-400 font-normal">/ night</span></span>
+                <span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full uppercase tracking-wide">
+                    Room {{ room.room_number }}
+                </span>
+            </div>
+            
+            <p class="text-gray-500 text-sm mb-6 flex-grow">
+                {{ room.description|default:"A perfect choice for travelers seeking comfort and style." }}
+            </p>
+
+            <div class="grid grid-cols-2 gap-4 mb-6 border-t border-gray-100 pt-4">
+                <div class="text-center">
+                    <i class="fa-solid fa-user-group text-indigo-500 mb-1"></i>
+                    <p class="text-xs text-gray-500">Capacity: {{ room.capacity }}</p>
+                </div>
+                <div class="text-center">
+                    <i class="fa-solid fa-ruler-combined text-indigo-500 mb-1"></i>
+                    <p class="text-xs text-gray-500">450 sqft</p>
+                </div>
+            </div>
+
+            <a href="{% if user.is_authenticated %}{% url 'book_room' room.id %}{% else %}{% url 'login' %}?next={% url 'book_room' room.id %}{% endif %}" 
+               class="w-full block text-center py-3 border-2 border-indigo-600 text-indigo-600 font-bold rounded-lg hover:bg-indigo-600 hover:text-white transition duration-300">
+                Check Availability
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-3 py-16 text-center">
+        <h3 class="text-xl font-bold text-gray-400">No rooms found.</h3>
+        <p class="text-gray-500">Please check back later.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

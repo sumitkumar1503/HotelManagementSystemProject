@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Kitchen Display System{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+ <style>
+  body { font-family: 'Inter', sans-serif; background-color: #fff7ed; }
+  .sidebar { background: linear-gradient(to bottom, #7c2d12, #9a3412, #c2410c); color: white; }
+  .sidebar-link:hover { background-color: rgba(255,255,255,0.1); transform: translateX(4px); }
+  .sidebar-link.active { background: linear-gradient(to right, #fb923c, #f97316); color: white; font-weight: 700; }
+ </style>
+</head>
+<body class="flex min-h-screen">
+  <!-- Sidebar -->
+  <aside class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl transition-transform duration-300">
+    <div class="flex items-center justify-center p-6 border-b border-white/20">
+      <i data-lucide="chef-hat" class="w-8 h-8 mr-3 text-orange-300"></i>
+      <h1 class="text-xl font-bold">Kitchen</h1>
+    </div>
+    
+    <nav class="p-4 space-y-2 flex-1">
+      <!-- Dashboard Link -->
+      <a href="{% url 'kitchen_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'kitchen_dashboard' %}active{% endif %}">
+        <i data-lucide="utensils" class="w-5 h-5 mr-3"></i> Active Orders
+      </a>
+      
+      <!-- History Link -->
+      <a href="{% url 'kitchen_history' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'kitchen_history' %}active{% endif %}">
+        <i data-lucide="history" class="w-5 h-5 mr-3"></i> History
+      </a>
+
+      <!-- NEW: Profile Link -->
+      <a href="{% url 'kitchen_profile' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'kitchen_profile' %}active{% endif %}">
+        <i data-lucide="user-circle" class="w-5 h-5 mr-3"></i> My Profile
+      </a>
+    </nav>
+
+    <!-- User Info & Logout -->
+    <div class="absolute bottom-0 w-full bg-black/10 border-t border-white/20">
+       <div class="p-4 flex items-center gap-3">
+           {% if user.profile_picture %}
+               <img src="{{ user.profile_picture.url }}" class="w-10 h-10 rounded-full border-2 border-orange-300 object-cover">
+           {% else %}
+               <div class="w-10 h-10 bg-orange-200 text-orange-800 rounded-full flex items-center justify-center font-bold">
+                   {{ user.username|first|upper }}
+               </div>
+           {% endif %}
+           <div class="flex-1 min-w-0">
+               <p class="text-sm font-bold truncate">{{ user.get_full_name|default:user.username }}</p>
+               <p class="text-xs text-orange-200">Chef</p>
+           </div>
+       </div>
+       <div class="px-4 pb-4">
+           <form action="{% url 'logout' %}" method="post">
+               {% csrf_token %}
+               <button class="flex items-center justify-center w-full py-2 text-sm bg-black/20 hover:bg-black/40 rounded text-orange-100 transition">
+                   <i data-lucide="log-out" class="w-4 h-4 mr-2"></i> Logout
+               </button>
+           </form>
+       </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 ml-64 p-8">
+    <!-- Top Bar for Mobile/Context (Optional, but good for consistency) -->
+    <div class="md:hidden mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
+        <span class="font-bold text-gray-800">Kitchen Display System</span>
+        <div class="flex items-center gap-2">
+             <span class="text-sm">{{ user.username }}</span>
+        </div>
+    </div>
+
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg bg-orange-100 text-orange-800 border border-orange-200 flex items-center gap-2">
+                <i data-lucide="info" class="w-5 h-5"></i> {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% block kitchen_content %}{% endblock %}
+  </main>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

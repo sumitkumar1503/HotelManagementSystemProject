@@ -1,0 +1,69 @@
+from django.contrib import admin
+from django.urls import path
+from django.contrib.auth.views import LogoutView
+from accounts import views
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('', views.index, name='home'),
+    path('about/', views.about_us, name='about'),
+    path('login/', views.login_view, name='login'),
+    path('signup/', views.register_customer, name='signup'),
+    path('logout/', LogoutView.as_view(next_page='home'), name='logout'),
+    path('rooms/', views.room_list, name='room_list'), # New Page
+    path('book-room/<int:room_id>/', views.book_room, name='book_room'), 
+    path('dashboard/bookings/', views.view_bookings, name='view_bookings'),
+    path('dashboard/booking/check-in/<int:booking_id>/', views.staff_check_in, name='staff_check_in'),
+    path('dashboard/booking/check-out/<int:booking_id>/', views.staff_check_out, name='staff_check_out'),
+    path('dashboard/admin/', views.admin_dashboard, name='admin_dashboard'),
+    path('dashboard/admin/add-employee/', views.add_employee, name='add_employee'),
+    path('dashboard/admin/employees/', views.view_employees, name='view_employees'),
+    path('dashboard/admin/employee/edit/<int:employee_id>/', views.edit_employee, name='edit_employee'),
+    path('dashboard/admin/employee/delete/<int:employee_id>/', views.delete_employee, name='delete_employee'),
+    path('dashboard/admin/rooms/', views.view_rooms, name='view_rooms'),
+    path('dashboard/admin/rooms/add/', views.add_room, name='add_room'),
+    path('dashboard/admin/rooms/edit/<int:room_id>/', views.edit_room, name='edit_room'),
+    path('dashboard/admin/rooms/delete/<int:room_id>/', views.delete_room, name='delete_room'),
+    path('dashboard/admin/guests/', views.view_guests, name='view_guests'),
+    path('dashboard/admin/guests/edit/<int:guest_id>/', views.edit_guest, name='edit_guest'),
+    path('dashboard/admin/guests/delete/<int:guest_id>/', views.delete_guest, name='delete_guest'),
+    path('dashboard/admin/cleaning-logs/', views.view_cleaning_logs, name='view_cleaning_logs'),
+    path('dashboard/admin/food/', views.view_food_menu, name='view_food_menu'),
+    path('dashboard/admin/food/add/', views.add_food_item, name='add_food_item'),
+    path('dashboard/admin/food/edit/<int:item_id>/', views.edit_food_item, name='edit_food_item'),
+    path('dashboard/admin/food/delete/<int:item_id>/', views.delete_food_item, name='delete_food_item'),
+    path('dashboard/admin/kitchen-monitor/', views.admin_kitchen_monitor, name='admin_kitchen_monitor'),
+    path('dashboard/admin/kitchen-history/', views.admin_kitchen_history, name='admin_kitchen_history'),
+    # Receptionist Staff
+    path('dashboard/receptionist/', views.receptionist_dashboard, name='receptionist_dashboard'),
+    path('dashboard/receptionist/walk-in/', views.receptionist_walkin, name='receptionist_walkin'), # NEW
+    path('dashboard/receptionist/rooms/', views.receptionist_room_status, name='receptionist_room_status'), # NEW
+    path('dashboard/receptionist/guests/', views.receptionist_guest_list, name='receptionist_guest_list'), # NEW
+    path('dashboard/receptionist/invoice/<int:booking_id>/', views.generate_invoice, name='generate_invoice'),
+    path('dashboard/receptionist/pay/<int:booking_id>/', views.process_checkout_payment, name='process_checkout_payment'),
+
+    # Customer Staff
+    path('dashboard/customer/', views.customer_dashboard, name='customer_dashboard'),
+    path('dashboard/my-bookings/', views.customer_bookings, name='customer_bookings'),
+    path('dashboard/customer/order-food/', views.order_food, name='order_food'),
+    path('dashboard/customer/food-orders/', views.customer_food_history, name='customer_food_history'),
+    path('dashboard/customer/profile/', views.customer_profile, name='customer_profile'),
+
+
+    # Kitchen Staff
+    path('dashboard/kitchen/', views.kitchen_dashboard, name='kitchen_dashboard'),
+    path('dashboard/kitchen/status/<int:order_id>/<str:status>/', views.update_order_status, name='update_order_status'),
+    path('dashboard/kitchen/history/', views.kitchen_history, name='kitchen_history'), 
+    path('dashboard/kitchen/profile/', views.kitchen_profile, name='kitchen_profile'), 
+    
+    # Housekeeping Staff
+    path('dashboard/housekeeping/', views.housekeeping_dashboard, name='housekeeping_dashboard'),
+    path('dashboard/housekeeping/clean/<int:room_id>/', views.mark_room_clean, name='mark_room_clean'),
+    path('dashboard/housekeeping/history/', views.housekeeping_history, name='housekeeping_history'),
+    path('dashboard/housekeeping/profile/', views.housekeeping_profile, name='housekeeping_profile'),
+    path('django-admin/', admin.site.urls),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,0 +1,123 @@
+{% extends 'kitchen_panel/kitchenbase.html' %} 
+
+{% block title %}Chef Profile{% endblock %}
+
+{% block kitchen_content %}
+<div class="max-w-4xl mx-auto">
+    <h2 class="text-3xl font-bold text-gray-800 mb-8 flex items-center">
+        <i data-lucide="user-circle" class="w-8 h-8 text-orange-600 mr-3"></i> My Chef Profile
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <!-- Left: ID Card -->
+        <div class="md:col-span-1">
+            <div class="bg-white rounded-2xl shadow-lg border border-orange-100 overflow-hidden relative text-center h-full flex flex-col">
+                <div class="h-32 bg-gradient-to-r from-orange-500 to-red-600 flex-shrink-0"></div>
+                <div class="-mt-12 mb-4 flex-shrink-0 relative z-10">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" class="w-24 h-24 rounded-full border-4 border-white shadow-md mx-auto object-cover bg-white">
+                    {% else %}
+                        <div class="w-24 h-24 rounded-full border-4 border-white shadow-md mx-auto bg-orange-100 flex items-center justify-center text-orange-600 text-3xl font-bold">
+                            {{ user.username|first|upper }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="px-6 pb-8 flex-1 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">{{ user.get_full_name }}</h3>
+                        <span class="inline-block bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-bold mt-2">HEAD CHEF</span>
+                    </div>
+                    
+                    <div class="text-left space-y-3 mt-6">
+                        <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg border border-orange-100">
+                            <span class="text-xs font-bold text-gray-500 uppercase">ID Number</span>
+                            <span class="font-mono font-bold text-gray-800">{{ employee.id_card_number }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg border border-orange-100">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Experience</span>
+                            <span class="font-bold text-gray-800">{{ employee.years_of_experience }} Years</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg border border-orange-100">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Salary</span>
+                            <span class="font-bold text-green-600">${{ employee.salary }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Edit Form -->
+        <div class="md:col-span-2">
+            <div class="bg-white rounded-2xl shadow-lg border border-orange-100 p-8 h-full">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 border-b border-gray-100 pb-4">Edit Personal Details</h3>
+                
+                <form method="post" enctype="multipart/form-data" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    {% if form.errors %}
+                        <div class="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+                            {{ form.errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">First Name</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Last Name</label>
+                            {{ form.last_name }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Mobile</label>
+                            {{ form.mobile }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Profile Photo</label>
+                            <input type="file" name="profile_picture" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                        </div>
+                    </div>
+                    
+                    <!-- Hide Employment Fields -->
+                    <div class="hidden">
+                        {{ form.job_type }}
+                        {{ form.salary }}
+                        {{ form.id_card_number }}
+                        {{ form.years_of_experience }}
+                    </div>
+
+                    <div class="pt-6 flex justify-end">
+                        <button type="submit" class="px-8 py-3 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 shadow-lg shadow-orange-200 transition transform hover:-translate-y-0.5">
+                            Update Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Ensure form inputs look good if global styles are missing */
+    .form-input {
+        width: 100%;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        border-width: 1px;
+        border-color: #e5e7eb;
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+    }
+    .form-input:focus {
+        border-color: #ea580c; /* Orange-600 */
+        box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
+    }
+</style>
+{% endblock %}

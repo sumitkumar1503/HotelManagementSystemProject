@@ -1,0 +1,129 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}Manage Bookings{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">Booking Desk</h2>
+        <p class="text-gray-500 mt-1">Manage guest arrivals and departures.</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-700 text-sm uppercase tracking-wider border-b">
+                        <th class="p-4 font-semibold">Guest Info</th>
+                        <th class="p-4 font-semibold">Room</th>
+                        <th class="p-4 font-semibold">Check In (Plan/Actual)</th>
+                        <th class="p-4 font-semibold">Check Out (Plan/Actual)</th>
+                        <th class="p-4 font-semibold">Status</th>
+                        <th class="p-4 font-semibold text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for booking in bookings %}
+                    <tr class="hover:bg-blue-50 transition group align-top">
+                        <!-- Guest Info -->
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                {% if booking.user.profile_picture %}
+                                    <img src="{{ booking.user.profile_picture.url }}" class="w-10 h-10 rounded-full object-cover">
+                                {% else %}
+                                    <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold">
+                                        {{ booking.user.username|first|upper }}
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <p class="font-bold text-gray-800">{{ booking.user.get_full_name|default:booking.user.username }}</p>
+                                    <p class="text-xs text-gray-500">ID: {{ booking.id }}</p>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Room Info -->
+                        <td class="p-4">
+                            <span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-sm border border-indigo-100 block w-fit mb-1">
+                                Room {{ booking.room.room_number }}
+                            </span>
+                            <span class="text-xs text-gray-400">{{ booking.room.get_room_type_display }}</span>
+                        </td>
+
+                        <!-- Check In Column -->
+                        <td class="p-4">
+                            <div class="flex flex-col gap-1">
+                                <div>
+                                    <span class="text-[10px] font-bold text-gray-400 uppercase">Plan</span>
+                                    <div class="text-sm font-semibold text-gray-800">{{ booking.check_in|date:"M d" }}</div>
+                                </div>
+                                
+                                {% if booking.actual_check_in %}
+                                <div class="mt-1">
+                                    <span class="text-[10px] font-bold text-blue-500 uppercase">Actual</span>
+                                    <div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded border border-green-100 w-fit">
+                                        {{ booking.actual_check_in|date:"H:i" }} <span class="text-[10px] text-gray-400">{{ booking.actual_check_in|date:"M d" }}</span>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Check Out Column -->
+                        <td class="p-4">
+                            <div class="flex flex-col gap-1">
+                                <div>
+                                    <span class="text-[10px] font-bold text-gray-400 uppercase">Plan</span>
+                                    <div class="text-sm font-semibold text-gray-800">{{ booking.check_out|date:"M d" }}</div>
+                                </div>
+                                
+                                {% if booking.actual_check_out %}
+                                <div class="mt-1">
+                                    <span class="text-[10px] font-bold text-blue-500 uppercase">Actual</span>
+                                    <div class="text-xs text-red-600 font-medium bg-red-50 px-2 py-0.5 rounded border border-red-100 w-fit">
+                                        {{ booking.actual_check_out|date:"H:i" }} <span class="text-[10px] text-gray-400">{{ booking.actual_check_out|date:"M d" }}</span>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td class="p-4">
+                            {% if booking.status == 'Checked Out' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Completed</span>
+                            {% elif booking.status == 'Checked In' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 animate-pulse">In House</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Reserved</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="p-4 text-right">
+                            {% if booking.status == 'Booked' %}
+                                <a href="{% url 'staff_check_in' booking.id %}" class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700 transition shadow-sm">
+                                    Check In
+                                </a>
+                            {% elif booking.status == 'Checked In' %}
+                                <a href="{% url 'generate_invoice' booking.id %}" class="inline-flex items-center px-3 py-2 bg-pink-600 text-white text-xs font-bold rounded hover:bg-pink-700 transition shadow-sm">
+                                    <i data-lucide="receipt" class="w-3 h-3 mr-1"></i> Bill & Checkout
+                                </a>
+                            {% elif booking.status == 'Checked Out' %}
+                                <!-- ADDED DOWNLOAD BUTTON WITH 'download' ATTRIBUTE -->
+                                <a href="{% url 'generate_invoice' booking.id %}?style=clean" download="Invoice-{{ booking.id }}.html" class="inline-flex items-center px-3 py-2 border border-gray-300 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition shadow-sm" title="Download Invoice">
+                                    <i data-lucide="download" class="w-3 h-3 mr-1"></i> Invoice
+                                </a>
+                            {% else %}
+                                <span class="text-gray-400 text-xs italic">Closed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="p-8 text-center text-gray-500">No active bookings found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

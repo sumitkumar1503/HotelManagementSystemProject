@@ -1,0 +1,156 @@
+{% extends 'customer_panel/customerbase.html' %}
+{% block customer_content %}
+
+<div class="max-w-6xl mx-auto mt-4">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Welcome, {{ user.first_name|default:user.username }}!</h1>
+            <p class="text-gray-500">Here is an overview of your stays and rewards.</p>
+        </div>
+        <a href="{% url 'room_list' %}" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 flex items-center">
+            <i data-lucide="plus" class="w-5 h-5 mr-2"></i> Book New Room
+        </a>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        
+        <!-- Total Spent Card -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 transition hover:shadow-md">
+            <div class="w-14 h-14 bg-green-50 text-green-600 rounded-full flex items-center justify-center">
+                <i data-lucide="dollar-sign" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Invested</p>
+                <h3 class="text-2xl font-black text-gray-800">${{ total_spent }}</h3>
+                <p class="text-xs text-green-600 font-medium">Lifetime value</p>
+            </div>
+        </div>
+
+        <!-- Loyalty Status Card -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 transition hover:shadow-md">
+            <div class="w-14 h-14 bg-gray-50 {{ loyalty_color }} rounded-full flex items-center justify-center">
+                <i data-lucide="{{ loyalty_icon }}" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Loyalty Status</p>
+                <h3 class="text-2xl font-black text-gray-800">{{ loyalty_tier }}</h3>
+                <p class="text-xs text-gray-500 font-medium">{{ total_stays }} Completed Stays</p>
+            </div>
+        </div>
+
+        <!-- Upcoming Card -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 transition hover:shadow-md">
+            <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center">
+                <i data-lucide="calendar-clock" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Upcoming Trips</p>
+                <h3 class="text-2xl font-black text-gray-800">{{ upcoming_count }}</h3>
+                {% if upcoming_count > 0 %}
+                    <p class="text-xs text-blue-600 font-medium">Pack your bags!</p>
+                {% else %}
+                    <a href="{% url 'room_list' %}" class="text-xs text-indigo-600 hover:underline">Plan a trip now</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Bookings Table -->
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <div>
+                <h2 class="text-lg font-bold text-gray-800">Recent Activity</h2>
+                <p class="text-xs text-gray-500">Your last 5 interactions</p>
+            </div>
+            <a href="{% url 'customer_bookings' %}" class="text-sm text-indigo-600 hover:text-indigo-800 font-bold flex items-center transition">
+                View Full History <i data-lucide="arrow-right" class="w-4 h-4 ml-1"></i>
+            </a>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                    <tr>
+                        <th class="px-6 py-4">Room</th>
+                        <th class="px-6 py-4">Dates</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for booking in bookings %}
+                    <tr class="hover:bg-blue-50/30 transition duration-150 group">
+                        <!-- Room Column -->
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-4">
+                                {% if booking.room.room_image %}
+                                    <img src="{{ booking.room.room_image.url }}" class="w-12 h-12 rounded-lg object-cover border border-gray-200 shadow-sm group-hover:scale-105 transition">
+                                {% else %}
+                                    <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400">
+                                        <i data-lucide="bed" class="w-6 h-6"></i>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <p class="font-bold text-gray-800">{{ booking.room.get_room_type_display }}</p>
+                                    <p class="text-xs text-gray-500">Room {{ booking.room.room_number }}</p>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Dates Column -->
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-600">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="calendar" class="w-4 h-4 text-gray-400"></i>
+                                    <span class="font-medium">{{ booking.check_in|date:"M d" }}</span> 
+                                    <span class="text-gray-400">→</span>
+                                    <span class="font-medium">{{ booking.check_out|date:"M d, Y" }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Status Column -->
+                        <td class="px-6 py-4">
+                            {% if booking.status == 'Checked Out' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                                    Completed
+                                </span>
+                            {% elif booking.status == 'Checked In' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200 animate-pulse">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span> Active Stay
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                                    Confirmed
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Price Column -->
+                        <td class="px-6 py-4 text-right">
+                            <p class="font-bold text-gray-800">${{ booking.room.price_per_night }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase">Per Night</p>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-12 text-center">
+                            <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <i data-lucide="calendar-x" class="w-8 h-8 text-gray-400"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-700">No bookings found</h3>
+                            <p class="text-gray-500 mb-6">Looks like you haven't booked a stay with us yet.</p>
+                            <a href="{% url 'room_list' %}" class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-md transition">
+                                Start Your Journey
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

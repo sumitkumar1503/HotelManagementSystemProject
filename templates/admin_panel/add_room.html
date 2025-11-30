@@ -1,0 +1,85 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">{{ title }}</h2>
+            <p class="text-gray-500">Enter room details below.</p>
+        </div>
+        <a href="{% url 'view_rooms' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition flex items-center">
+            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="p-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+        
+        <form method="post" enctype="multipart/form-data" class="p-8 space-y-6">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                    <p class="font-bold text-red-700">Please fix the errors:</p>
+                    {{ form.errors }}
+                </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Room Details -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
+                    {{ form.room_number }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Room Type</label>
+                    {{ form.room_type }}
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Price per Night ($)</label>
+                    {{ form.price_per_night }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Capacity (Persons)</label>
+                    {{ form.capacity }}
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    {{ form.description }}
+                </div>
+
+                <!-- Image Upload -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Room Image</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer relative">
+                         {% if form.instance.room_image %}
+                            <p class="text-sm text-green-600 mb-2">Current: {{ form.instance.room_image.name }}</p>
+                         {% endif %}
+                         <i data-lucide="image-plus" class="w-8 h-8 text-gray-400 mb-2"></i>
+                         <span class="text-sm text-gray-500">Click to upload new image</span>
+                         <div class="opacity-0 absolute inset-0 w-full h-full cursor-pointer">
+                             {{ form.room_image }}
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Availability Checkbox -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Current Status</label>
+                    {{ form.room_status }}
+                    <p class="text-xs text-gray-500 mt-1">Set to 'Available' for new rooms.</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <button type="submit" class="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition flex items-center">
+                    <i data-lucide="save" class="w-5 h-5 mr-2"></i> Save Room
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

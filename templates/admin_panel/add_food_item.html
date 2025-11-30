@@ -1,0 +1,65 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">{{ title }}</h2>
+            <p class="text-gray-500">Update restaurant menu details.</p>
+        </div>
+        <a href="{% url 'view_food_menu' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition flex items-center">
+            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="p-1 bg-gradient-to-r from-orange-400 to-red-500"></div>
+        
+        <form method="post" enctype="multipart/form-data" class="p-8 space-y-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Name -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                    {{ form.name }}
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    {{ form.category }}
+                </div>
+
+                <!-- Price -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
+                    {{ form.price }}
+                </div>
+
+                <!-- Image -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Food Image</label>
+                    {{ form.image }}
+                </div>
+
+                <!-- Availability -->
+                <div class="md:col-span-2 flex items-center gap-3 p-4 bg-orange-50 rounded-lg border border-orange-100">
+                    {{ form.is_available }}
+                    <div>
+                        <label class="font-semibold text-gray-800">Available to Order</label>
+                        <p class="text-xs text-gray-500">Uncheck if you are out of stock of ingredients.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <button type="submit" class="px-8 py-3 bg-orange-600 text-white font-semibold rounded-lg shadow-md hover:bg-orange-700 transition flex items-center">
+                    <i data-lucide="save" class="w-5 h-5 mr-2"></i> Save Item
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

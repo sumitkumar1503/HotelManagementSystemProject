@@ -1,0 +1,97 @@
+{% extends 'common/homebase.html' %}
+{% block content %}
+
+<!-- Hero Section -->
+<div class="relative bg-gray-900 rounded-3xl overflow-hidden shadow-2xl mb-12">
+    <!-- Background Image Overlay -->
+    <div class="absolute inset-0">
+        <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" class="w-full h-full object-cover opacity-40">
+    </div>
+    
+    <div class="relative px-6 py-24 sm:px-12 lg:px-16">
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6">
+            Welcome to <span class="text-yellow-400">Grand Hotel</span>
+        </h1>
+        <p class="mt-4 max-w-xl text-xl text-gray-200 mb-8">
+            Experience luxury, comfort, and world-class service. Book your perfect getaway today.
+        </p>
+        <div class="flex flex-wrap gap-4">
+            <a href="{% url 'room_list' %}" class="px-8 py-3 bg-yellow-400 text-gray-900 font-bold rounded-lg hover:bg-yellow-300 transition shadow-lg transform hover:-translate-y-1">
+                Browse Rooms
+            </a>
+            {% if not user.is_authenticated %}
+            <a href="{% url 'signup' %}" class="px-8 py-3 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-gray-900 transition">
+                Join Member Club
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Featured Rooms Section -->
+<div class="mb-12">
+    <div class="flex justify-between items-end mb-8">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Featured Rooms</h2>
+            <p class="text-gray-500 mt-2">Hand-picked luxury selections for you.</p>
+        </div>
+        <a href="{% url 'room_list' %}" class="text-indigo-600 font-semibold hover:text-indigo-800 flex items-center">
+            View All Rooms <i class="fa-solid fa-arrow-right ml-2"></i>
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% for room in featured_rooms %}
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-2xl transition duration-300 group">
+            <div class="relative h-64 overflow-hidden">
+                {% if room.room_image %}
+                    <img src="{{ room.room_image.url }}" class="w-full h-full object-cover transform group-hover:scale-110 transition duration-500">
+                {% else %}
+                    <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+                        <i class="fa-solid fa-image text-4xl"></i>
+                    </div>
+                {% endif %}
+                <div class="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold text-gray-800 shadow-sm">
+                    ${{ room.price_per_night }} / night
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-gray-900">{{ room.get_room_type_display }}</h3>
+                    <div class="flex items-center text-yellow-400 text-sm">
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                </div>
+                
+                <p class="text-gray-500 text-sm mb-4 line-clamp-2">
+                    {{ room.description|default:"Experience ultimate comfort in our beautifully designed rooms." }}
+                </p>
+
+                <div class="flex items-center gap-4 text-gray-500 text-sm mb-6">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-user-group"></i> {{ room.capacity }} Guests</span>
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-wifi"></i> Free Wifi</span>
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-ban-smoking"></i> No Smoking</span>
+                </div>
+
+                <!-- Book Now Button Logic -->
+                <a href="{% if user.is_authenticated %}{% url 'book_room' room.id %}{% else %}{% url 'login' %}?next={% url 'book_room' room.id %}{% endif %}" 
+                   class="block w-full py-3 text-center bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-md">
+                    Book Now
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-3 text-center py-12 text-gray-500">
+            <i class="fa-solid fa-bed text-4xl mb-4 text-gray-300"></i>
+            <p>No featured rooms available at the moment.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

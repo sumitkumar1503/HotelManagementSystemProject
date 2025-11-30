@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #{{ booking.id }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .invoice-box { max-width: 800px; margin: 40px auto; padding: 40px; border: 1px solid #eee; background-color: white; border-radius: 12px; }
+    </style>
+</head>
+<body>
+
+    <div class="invoice-box shadow-xl">
+        <!-- Invoice Header -->
+        <div class="flex justify-between items-start border-b border-gray-100 pb-8 mb-8">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-800">Grand Hotel</h1>
+                <p class="text-gray-500 mt-1">123 Luxury Ave, Hotel City</p>
+                <p class="text-gray-500">contact@grandhotel.com</p>
+            </div>
+            <div class="text-right">
+                <h2 class="text-2xl font-bold text-purple-700">INVOICE</h2>
+                <p class="text-gray-500 mt-1">#INV-{{ booking.id }}</p>
+                <p class="text-sm text-gray-400">Date: {% now "M d, Y" %}</p>
+            </div>
+        </div>
+
+        <!-- Guest Info -->
+        <div class="grid grid-cols-2 gap-8 mb-8">
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Bill To</h3>
+                <p class="font-bold text-lg text-gray-800">{{ booking.user.get_full_name|default:booking.user.username }}</p>
+                <p class="text-gray-600 text-sm">{{ booking.user.email }}</p>
+                <p class="text-gray-600 text-sm">{{ booking.user.mobile }}</p>
+            </div>
+            <div class="text-right">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Stay Details</h3>
+                <p class="text-gray-800 text-sm"><span class="font-semibold">Room:</span> {{ booking.room.room_number }} ({{ booking.room.get_room_type_display }})</p>
+                <p class="text-gray-800 text-sm"><span class="font-semibold">Check In:</span> {{ booking.check_in }}</p>
+                <p class="text-gray-800 text-sm"><span class="font-semibold">Check Out:</span> {{ booking.check_out }}</p>
+            </div>
+        </div>
+
+        <!-- Line Items -->
+        <table class="w-full text-left mb-8">
+            <thead>
+                <tr class="bg-gray-50 text-gray-600 text-xs uppercase border-b border-gray-200">
+                    <th class="py-3 px-4">Description</th>
+                    <th class="py-3 px-4 text-center">Qty / Days</th>
+                    <th class="py-3 px-4 text-right">Unit Price</th>
+                    <th class="py-3 px-4 text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-700 text-sm">
+                <!-- Room Charge -->
+                <tr class="border-b border-gray-50">
+                    <td class="py-4 px-4 font-medium">Room Charges ({{ duration }} Nights)</td>
+                    <td class="py-4 px-4 text-center">{{ duration }}</td>
+                    <td class="py-4 px-4 text-right">${{ booking.room.price_per_night }}</td>
+                    <td class="py-4 px-4 text-right">${{ room_total }}</td>
+                </tr>
+
+                <!-- Food Charges -->
+                {% for order in food_orders %}
+                    {% for item in order.items.all %}
+                    <tr class="border-b border-gray-50">
+                        <td class="py-4 px-4 text-gray-500">Room Service: {{ item.name }}</td>
+                        <td class="py-4 px-4 text-center">1</td>
+                        <td class="py-4 px-4 text-right">${{ item.price }}</td>
+                        <td class="py-4 px-4 text-right">${{ item.price }}</td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="flex justify-end">
+            <div class="w-1/2">
+                <div class="flex justify-between py-2 border-b border-gray-100 text-sm">
+                    <span class="text-gray-600">Subtotal</span>
+                    <span class="font-semibold">${{ grand_total }}</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-100 text-sm">
+                    <span class="text-gray-600">Taxes (0%)</span>
+                    <span class="font-semibold">$0.00</span>
+                </div>
+                <div class="flex justify-between py-4">
+                    <span class="text-xl font-bold text-gray-800">Total Due</span>
+                    <span class="text-xl font-bold text-purple-700">${{ grand_total }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer Status -->
+        <div class="mt-8 pt-8 border-t border-gray-100 text-center">
+            {% if booking.is_paid %}
+                <span class="px-4 py-2 bg-green-100 text-green-800 rounded-full font-bold text-sm border border-green-200">
+                    PAID - Thank you for staying with us!
+                </span>
+            {% else %}
+                <span class="px-4 py-2 bg-red-100 text-red-800 rounded-full font-bold text-sm border border-red-200">
+                    PAYMENT PENDING
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Auto Print Script (Optional) -->
+    <!-- <script>window.print();</script> -->
+</body>
+</html>

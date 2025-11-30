@@ -1,0 +1,155 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Guest Portal{% endblock %} - Grand Hotel</title>
+
+  <!-- External Libraries -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+ <style>
+  body {
+    background: linear-gradient(to right, #e0f2fe, #fef3c7, #fce7f3);
+    font-family: 'Inter', sans-serif;
+  }
+  .sidebar {
+    background: linear-gradient(to bottom, #1e1b4b, #312e81, #4338ca);
+    color: white;
+  }
+  .sidebar-link:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    transform: translateX(4px);
+  }
+  .sidebar-link.active {
+    background: linear-gradient(to right, #a5b4fc, #6366f1);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.6);
+    font-weight: 600;
+  }
+  header {
+    background: #1e1b4b;
+    color: white;
+  }
+  .brand-text {
+    background: linear-gradient(to right, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+  }
+</style>
+</head>
+<body class="bg-gray-50">
+
+<div class="flex min-h-screen">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar w-64 flex-shrink-0 fixed inset-y-0 left-0 z-30 transform -translate-x-full md:translate-x-0 shadow-xl transition-transform duration-300">
+    <div class="flex items-center justify-center p-6 border-b border-white/30">
+      <i data-lucide="crown" class="w-8 h-8 mr-3 text-yellow-300"></i>
+      <h1 class="text-2xl font-bold tracking-wide">Guest Portal</h1>
+    </div>
+
+    <nav class="flex-1 px-4 py-6 space-y-2">
+      
+      <a href="{% url 'customer_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_dashboard' %}active{% endif %}">
+        <i data-lucide="layout-dashboard" class="w-5 h-5 mr-4"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="{% url 'customer_bookings' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_bookings' %}active{% endif %}">
+        <i data-lucide="calendar-days" class="w-5 h-5 mr-4"></i>
+        <span>My Bookings</span>
+      </a>
+
+      <a href="{% url 'room_list' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all">
+        <i data-lucide="bed-double" class="w-5 h-5 mr-4"></i>
+        <span>Book New Room</span>
+      </a>
+
+      <a href="{% url 'order_food' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'order_food' %}active{% endif %}">
+        <i data-lucide="utensils" class="w-5 h-5 mr-4"></i>
+        <span>Order Food</span>
+      </a>
+
+      <a href="{% url 'customer_food_history' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_food_history' %}active{% endif %}">
+        <i data-lucide="clipboard-list" class="w-5 h-5 mr-4"></i>
+        <span>Food Orders</span>
+      </a>
+
+      <!-- LINKED: Profile Settings -->
+      <a href="{% url 'customer_profile' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_profile' %}active{% endif %}">
+        <i data-lucide="user-cog" class="w-5 h-5 mr-4"></i>
+        <span>Profile Settings</span>
+      </a>
+      
+     
+
+    </nav>
+
+    <div class="px-4 py-6 border-t border-white/30">
+      <form action="{% url 'logout' %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="w-full sidebar-link flex items-center p-3 rounded-lg text-red-200 hover:bg-red-500 hover:text-white transition-all">
+          <i data-lucide="log-out" class="w-5 h-5 mr-4"></i>
+          <span>Logout</span>
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div id="main-content" class="main-content flex-1 flex flex-col md:ml-64 transition-all duration-300">
+    <header class="shadow p-4 flex items-center justify-between sticky top-0 z-20">
+      <div class="flex items-center space-x-4">
+        <button id="menu-button" class="mr-2 md:hidden">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <span class="brand-text text-xl">Grand Hotel</span>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <div class="flex flex-col text-right mr-2 hidden md:block">
+            <span class="text-sm font-semibold">{{ user.get_full_name|default:user.username }}</span>
+        </div>
+        
+        <div class="relative">
+            {% if user.profile_picture %}
+                <img src="{{ user.profile_picture.url }}" alt="Profile" class="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover">
+            {% else %}
+                <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold border-2 border-white shadow-md">
+                    {{ user.username|first|upper }}
+                </div>
+            {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 p-6 md:p-8 overflow-y-auto">
+      {% if messages %}
+      <div class="mb-4">
+        {% for message in messages %}
+        <div class="p-3 mb-2 rounded-lg shadow-md flex items-center gap-2 {% if message.tags == 'error' %}bg-red-500 text-white{% else %}bg-green-500 text-white{% endif %}">
+           {% if message.tags == 'error' %}<i data-lucide="alert-circle" class="w-5 h-5"></i>{% else %}<i data-lucide="check-circle" class="w-5 h-5"></i>{% endif %}
+           {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% block customer_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+  const menuButton = document.getElementById('menu-button');
+  const sidebar = document.getElementById('sidebar');
+  menuButton.addEventListener('click', () => {
+    sidebar.classList.toggle('-translate-x-full');
+  });
+</script>
+</body>
+</html>

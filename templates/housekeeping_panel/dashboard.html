@@ -1,0 +1,73 @@
+{% extends 'housekeeping_panel/housekeepingbase.html' %} 
+
+{% block title %}Housekeeping Dashboard{% endblock %}
+
+{% block housekeeping_content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Cleaning Tasks</h2>
+            <p class="text-gray-500 mt-1">Overview of rooms requiring cleaning service.</p>
+        </div>
+        
+        <div class="flex gap-4">
+            <div class="bg-white px-6 py-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
+                <div class="p-2 bg-red-100 text-red-600 rounded-lg">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Dirty</p>
+                    <p class="text-xl font-bold text-gray-800">{{ dirty_rooms.count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Grid -->
+    {% if dirty_rooms %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for room in dirty_rooms %}
+        <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition group">
+            <!-- Room Header -->
+            <div class="bg-red-50 p-4 border-b border-red-100 flex justify-between items-center">
+                <span class="font-bold text-red-800 text-lg">Room {{ room.room_number }}</span>
+                <span class="px-2 py-1 bg-white text-red-600 text-xs font-bold rounded border border-red-200 uppercase">Dirty</span>
+            </div>
+            
+            <!-- Room Body -->
+            <div class="p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="p-3 bg-gray-100 rounded-lg text-gray-500">
+                        <i data-lucide="bed-double" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700">{{ room.get_room_type_display }}</p>
+                        <p class="text-xs text-gray-400">Needs Full Service</p>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <a href="{% url 'mark_room_clean' room.id %}" class="w-full flex items-center justify-center gap-2 py-3 bg-white border-2 border-green-500 text-green-600 font-bold rounded-lg hover:bg-green-500 hover:text-white transition group-hover:-translate-y-1 transform duration-200">
+                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                    Mark as Clean
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center max-w-2xl mx-auto mt-10">
+        <div class="w-24 h-24 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i data-lucide="sparkles" class="w-12 h-12"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-2">All Caught Up!</h3>
+        <p class="text-gray-500 mb-8">There are no dirty rooms at the moment. Great job!</p>
+        <button onclick="window.location.reload();" class="px-6 py-3 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 transition shadow-md">
+            Refresh List
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

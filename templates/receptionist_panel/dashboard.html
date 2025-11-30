@@ -1,0 +1,171 @@
+{% extends 'receptionist_panel/receptionistbase.html' %} 
+
+{% block title %}Front Desk Dashboard{% endblock %}
+
+{% block receptionist_content %}
+<div class="max-w-7xl mx-auto">
+    
+    <!-- Header / Welcome -->
+    <div class="flex justify-between items-end mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Front Desk Overview</h1>
+            <p class="text-gray-500 mt-1">Today's logistics: {{ today|date:"l, F jS, Y" }}</p>
+        </div>
+        <div class="flex gap-2">
+            <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold flex items-center">
+                <span class="w-2 h-2 bg-purple-600 rounded-full mr-2 animate-pulse"></span> Live System
+            </span>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Arrivals -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-purple-100 relative overflow-hidden group hover:shadow-md transition">
+            <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition">
+                <i data-lucide="plane-landing" class="w-24 h-24 text-purple-600"></i>
+            </div>
+            <p class="text-purple-600 text-xs font-bold uppercase tracking-wider">Pending Arrivals</p>
+            <h3 class="text-4xl font-black text-gray-800 mt-2 mb-1">{{ arrivals.count }}</h3>
+            <p class="text-xs text-gray-400">Guests expected to check-in</p>
+        </div>
+
+        <!-- Departures -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-pink-100 relative overflow-hidden group hover:shadow-md transition">
+            <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition">
+                <i data-lucide="plane-takeoff" class="w-24 h-24 text-pink-600"></i>
+            </div>
+            <p class="text-pink-600 text-xs font-bold uppercase tracking-wider">Pending Departures</p>
+            <h3 class="text-4xl font-black text-gray-800 mt-2 mb-1">{{ departures.count }}</h3>
+            <p class="text-xs text-gray-400">Guests expected to check-out</p>
+        </div>
+
+        <!-- In House -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 relative overflow-hidden group hover:shadow-md transition">
+            <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition">
+                <i data-lucide="home" class="w-24 h-24 text-blue-600"></i>
+            </div>
+            <p class="text-blue-600 text-xs font-bold uppercase tracking-wider">Total Occupancy</p>
+            <h3 class="text-4xl font-black text-gray-800 mt-2 mb-1">{{ in_house_count }}</h3>
+            <p class="text-xs text-gray-400">Active guests in-house</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- ARRIVALS SECTION -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div class="px-6 py-5 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="log-in" class="w-5 h-5 text-purple-600"></i> Arrivals Queue
+                </h3>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <tbody class="divide-y divide-gray-50">
+                        {% for booking in arrivals %}
+                        <tr class="hover:bg-purple-50/30 transition group">
+                            <td class="p-5">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold text-sm">
+                                        {{ booking.user.username|first|upper }}
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-gray-800 text-sm">{{ booking.user.get_full_name|default:booking.user.username }}</p>
+                                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                                            <span class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-mono">RM {{ booking.room.room_number }}</span>
+                                            <span>{{ booking.room.get_room_type_display }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Dirty Room Warning -->
+                                {% if booking.room.room_status == 'dirty' %}
+                                    <div class="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-yellow-50 text-yellow-700 text-[10px] font-bold rounded border border-yellow-100">
+                                        <i data-lucide="alert-triangle" class="w-3 h-3"></i> Room Dirty
+                                    </div>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="p-5 text-right">
+                                <p class="text-xs text-gray-400 mb-1">Booked: {{ booking.check_in|date:"M d" }}</p>
+                                {% if booking.room.room_status == 'dirty' %}
+                                    <button disabled class="opacity-50 cursor-not-allowed inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-400 text-xs font-bold rounded-lg border border-gray-200">
+                                        <i data-lucide="lock" class="w-3 h-3 mr-1.5"></i> Check In
+                                    </button>
+                                {% else %}
+                                    <a href="{% url 'staff_check_in' booking.id %}" class="inline-flex items-center px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
+                                        <i data-lucide="key" class="w-3 h-3 mr-1.5"></i> Check In
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="p-8 text-center text-gray-400 text-sm">
+                                <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2 text-purple-200"></i>
+                                No pending arrivals.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- DEPARTURES SECTION -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div class="px-6 py-5 bg-gradient-to-r from-pink-50 to-white border-b border-pink-100 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="log-out" class="w-5 h-5 text-pink-600"></i> Departures Queue
+                </h3>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <tbody class="divide-y divide-gray-50">
+                        {% for booking in departures %}
+                        <tr class="hover:bg-pink-50/30 transition group">
+                            <td class="p-5">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center font-bold text-sm">
+                                        {{ booking.user.username|first|upper }}
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-gray-800 text-sm">{{ booking.user.get_full_name|default:booking.user.username }}</p>
+                                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                                            <span class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-mono">RM {{ booking.room.room_number }}</span>
+                                            {% if booking.is_paid %}
+                                                <span class="text-green-600 font-bold flex items-center gap-0.5"><i data-lucide="check" class="w-3 h-3"></i> Paid</span>
+                                            {% else %}
+                                                <span class="text-red-500 font-bold">Payment Pending</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            
+                            <td class="p-5 text-right">
+                                <p class="text-xs text-gray-400 mb-1">Due: {{ booking.check_out|date:"M d" }}</p>
+                                <a href="{% url 'generate_invoice' booking.id %}" class="inline-flex items-center px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
+                                    <i data-lucide="receipt" class="w-3 h-3 mr-1.5"></i> Bill & Out
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="p-8 text-center text-gray-400 text-sm">
+                                <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2 text-pink-200"></i>
+                                No active departures.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

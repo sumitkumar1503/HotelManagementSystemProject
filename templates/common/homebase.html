@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management System</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Custom font import */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+        body { font-family: 'Poppins', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 flex flex-col min-h-screen">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-indigo-900 text-white shadow-lg">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <!-- Logo / Brand -->
+            <a href="{% url 'home' %}" class="text-2xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-hotel"></i>
+                <span>Grand Hotel</span>
+            </a>
+
+            <!-- Navigation Links -->
+            <div class="flex items-center gap-6">
+                <a href="{% url 'home' %}" class="hover:text-indigo-300 transition">Home</a>
+                <a href="{% url 'about' %}" class="hover:text-indigo-300 transition">About Us</a>
+                <a href="{% url 'room_list' %}" class="hover:text-indigo-300 transition">Rooms</a>
+                {% if not user.is_authenticated %}
+                    <!-- Guest Links -->
+                    <a href="{% url 'login' %}" class="px-4 py-2 border border-white rounded hover:bg-white hover:text-indigo-900 transition">Login</a>
+                    <a href="{% url 'signup' %}" class="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500 transition">Sign Up</a>
+                {% else %}
+                    <!-- Dynamic Dashboard Button based on Role & Job -->
+                    {% if user.role == 'admin' %}
+                        <a href="{% url 'admin_dashboard' %}" class="text-yellow-400 font-semibold border border-yellow-400 px-3 py-1 rounded hover:bg-yellow-400 hover:text-indigo-900">
+                            <i class="fa-solid fa-user-shield"></i> Admin Panel
+                        </a>
+
+                    {% elif user.role == 'customer' %}
+                        <a href="{% url 'customer_dashboard' %}" class="text-blue-300 font-semibold border border-blue-300 px-3 py-1 rounded hover:bg-blue-300 hover:text-indigo-900">
+                            <i class="fa-solid fa-user"></i> My Profile
+                        </a>
+
+                    {% elif user.role == 'employee' %}
+                        <!-- Detailed check for Employee Job Type -->
+                        {% if user.employee_profile.job_type == 'receptionist' %}
+                            <a href="{% url 'receptionist_dashboard' %}" class="text-green-400 font-semibold border border-green-400 px-3 py-1 rounded hover:bg-green-400 hover:text-indigo-900">
+                                <i class="fa-solid fa-bell-concierge"></i> Reception
+                            </a>
+                        {% elif user.employee_profile.job_type == 'kitchen' %}
+                            <a href="{% url 'kitchen_dashboard' %}" class="text-orange-400 font-semibold border border-orange-400 px-3 py-1 rounded hover:bg-orange-400 hover:text-indigo-900">
+                                <i class="fa-solid fa-utensils"></i> Kitchen
+                            </a>
+                        {% elif user.employee_profile.job_type == 'housekeeping' %}
+                            <a href="{% url 'housekeeping_dashboard' %}" class="text-purple-400 font-semibold border border-purple-400 px-3 py-1 rounded hover:bg-purple-400 hover:text-indigo-900">
+                                <i class="fa-solid fa-broom"></i> Housekeeping
+                            </a>
+                        {% endif %}
+                    {% endif %}
+
+                    <!-- Logout Button -->
+                    <form action="{% url 'logout' %}" method="post" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="ml-4 text-gray-300 hover:text-red-400 transition" title="Logout">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow container mx-auto px-6 py-8">
+        <!-- Messages (Success/Error alerts) -->
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}
+        <!-- Child templates will inject content here -->
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-6 text-center">
+        <p>&copy; 2025 Grand Hotel System. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
