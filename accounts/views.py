@@ -144,15 +144,15 @@ def admin_dashboard(request):
     chart_months = []
     chart_revenue = []
     
-    # for entry in daily_data:
-    #     chart_months.append(entry['day'].strftime('%a')) # Mon, Tue, Wed...
-    #     chart_revenue.append(float(entry['revenue']))
+    for entry in daily_data:
+        chart_months.append(entry['day'].strftime('%a')) # Mon, Tue, Wed...
+        chart_revenue.append(float(entry['revenue']))
 
     # --- DEMO MODE (FOR THUMBNAILS/EMPTY STATES) ---
-    if not chart_revenue:
-        chart_months = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        # Generate a nice looking curve
-        chart_revenue = [120, 190, 150, 250, 210, 320, 280] 
+    # if not chart_revenue:
+    #     chart_months = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    #     # Generate a nice looking curve
+    #     chart_revenue = [120, 190, 150, 250, 210, 320, 280] 
 
     # 3. CHART DATA: Room Type Popularity
     room_stats = Booking.objects.values('room__room_type')\
@@ -163,9 +163,9 @@ def admin_dashboard(request):
     room_counts = [item['count'] for item in room_stats]
     
     # Demo Mode for Room Chart
-    if total_bookings < 10:
-        room_labels = ['Single Room', 'Double Room', 'Executive Suite', 'Deluxe King', 'Family Studio']
-        room_counts = [45, 32, 15, 28, 12] # Values that make a nice donut chart
+    # if total_bookings < 11:
+    #     room_labels = ['Single Room', 'Double Room', 'Executive Suite', 'Deluxe King', 'Family Studio']
+    #     room_counts = [45, 32, 15, 28, 12] # Values that make a nice donut chart
 
 
     context = {
