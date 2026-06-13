@@ -10,7 +10,7 @@
 
     <div class="bg-white rounded-xl shadow-lg border border-purple-100 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+            <table class="rtable w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-purple-50 text-purple-900 text-sm uppercase tracking-wider border-b border-purple-100">
                         <th class="p-4 font-semibold">Guest</th>
@@ -24,7 +24,7 @@
                 <tbody class="divide-y divide-gray-100">
                     {% for receipt in receipts %}
                     <tr class="hover:bg-purple-50/50 transition align-top">
-                        <td class="p-4">
+                        <td data-label="Guest" class="p-4">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold">
                                     {{ receipt.booking.user.username|first|upper }}
@@ -35,22 +35,22 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="p-4">
+                        <td data-label="Booking" class="p-4">
                             <span class="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg font-bold text-sm border border-purple-100 block w-fit mb-1">
                                 Room {{ receipt.booking.room.room_number }}
                             </span>
                             <span class="text-xs text-gray-400">#{{ receipt.booking.id }} &middot; {{ receipt.booking.check_in|date:"M d" }} → {{ receipt.booking.check_out|date:"M d" }}</span>
                         </td>
-                        <td class="p-4 font-bold text-gray-800">
+                        <td data-label="Amount" class="p-4 font-bold text-gray-800">
                             {{ site_currency }}{{ receipt.amount }}
                             {% if receipt.note %}<p class="text-xs text-gray-400 font-normal">{{ receipt.note }}</p>{% endif %}
                         </td>
-                        <td class="p-4">
+                        <td data-label="Receipt" class="p-4">
                             <a href="{{ receipt.receipt_file.url }}" target="_blank" class="inline-flex items-center gap-1 text-indigo-600 font-medium hover:underline">
                                 <i data-lucide="file-text" class="w-4 h-4"></i> View
                             </a>
                         </td>
-                        <td class="p-4">
+                        <td data-label="Status" class="p-4">
                             {% if receipt.status == 'confirmed' %}
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Confirmed</span>
                             {% elif receipt.status == 'rejected' %}
@@ -59,7 +59,7 @@
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 animate-pulse">Pending</span>
                             {% endif %}
                         </td>
-                        <td class="p-4 text-right">
+                        <td class="rtable-actions p-4 text-right">
                             {% if receipt.status == 'confirmed' %}
                                 <span class="text-gray-400 text-xs italic">Done</span>
                             {% else %}

@@ -11,7 +11,7 @@
 
     <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
+            <table class="rtable w-full text-left">
                 <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b">
                     <tr>
                         <th class="px-6 py-4 w-1/4">Room Details</th>
@@ -26,7 +26,7 @@
                     {% for booking in bookings %}
                     <tr class="hover:bg-blue-50 transition align-top">
                         <!-- Room Column -->
-                        <td class="px-6 py-4">
+                        <td data-label="Room" class="px-6 py-4">
                             <div class="flex items-start gap-3">
                                 {% if booking.room.room_image %}
                                     <img src="{{ booking.room.room_image.url }}" class="w-16 h-16 rounded-lg object-cover border border-gray-200">
@@ -43,7 +43,7 @@
                         </td>
 
                         <!-- Check In Column -->
-                        <td class="px-6 py-4">
+                        <td data-label="Check In" class="px-6 py-4">
                             <div class="flex flex-col gap-1">
                                 <!-- Planned -->
                                 <div>
@@ -69,7 +69,7 @@
                         </td>
 
                         <!-- Check Out Column -->
-                        <td class="px-6 py-4">
+                        <td data-label="Check Out" class="px-6 py-4">
                             <div class="flex flex-col gap-1">
                                 <!-- Planned -->
                                 <div>
@@ -95,7 +95,7 @@
                         </td>
 
                         <!-- Status Column -->
-                        <td class="px-6 py-4">
+                        <td data-label="Status" class="px-6 py-4">
                             {% if booking.status == 'Cancelled' %}
                                 <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded border border-red-200">
                                     Cancelled
@@ -116,12 +116,12 @@
                         </td>
 
                         <!-- Price Column -->
-                        <td class="px-6 py-4 text-right font-bold text-gray-800">
+                        <td data-label="Price" class="px-6 py-4 text-right font-bold text-gray-800">
                             {{ site_currency }}{{ booking.room.price_per_night }}
                         </td>
 
                         <!-- Payment Column -->
-                        <td class="px-6 py-4 text-right">
+                        <td data-label="Payment" class="rtable-actions px-6 py-4 text-right">
                             {% if booking.status == 'Cancelled' %}
                                 <span class="text-xs text-gray-400 italic">—</span>
                             {% else %}

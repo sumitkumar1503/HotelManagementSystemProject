@@ -15,6 +15,7 @@
   .sidebar-link.active { background: linear-gradient(to right, #34d399, #10b981); color: white; font-weight: 700; }
   .form-input, .form-select { width: 100%; padding: 10px 15px; border: 1px solid #e5e7eb; border-radius: 8px; outline: none; }
  </style>
+  {% include 'common/_table_css.html' %}
 </head>
 <body class="flex min-h-screen">
   <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col">
@@ -23,7 +24,7 @@
       <h1 class="text-xl font-bold">Manager</h1>
     </div>
 
-    <nav class="p-4 space-y-2 flex-1">
+    <nav class="p-4 space-y-2 flex-1 min-h-0 overflow-y-auto">
       <a href="{% url 'manager_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}">
         <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i> Dashboard
       </a>
@@ -45,7 +46,7 @@
       </a>
     </nav>
 
-    <div class="bg-black/10 border-t border-white/20">
+    <div class="shrink-0 bg-black/10 border-t border-white/20">
        <div class="p-4 flex items-center gap-3">
            {% if user.profile_picture %}
                <img src="{{ user.profile_picture.url }}" class="w-10 h-10 rounded-full border-2 border-emerald-300 object-cover">

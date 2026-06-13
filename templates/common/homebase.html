@@ -17,7 +17,7 @@
 <body class="bg-gray-50 flex flex-col min-h-screen">
 
     <!-- Navigation Bar -->
-    <nav class="bg-indigo-900 text-white shadow-lg">
+    <nav class="bg-indigo-900 text-white shadow-lg relative z-50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <!-- Logo / Brand -->
             <a href="{% url 'home' %}" class="text-2xl font-bold flex items-center gap-2">
@@ -25,11 +25,17 @@
                 <span>Grand Hotel</span>
             </a>
 
+            <!-- Hamburger (mobile only) -->
+            <button id="home-menu-btn" class="md:hidden text-2xl p-1" aria-label="Toggle menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
             <!-- Navigation Links -->
-            <div class="flex items-center gap-6">
-                <a href="{% url 'home' %}" class="hover:text-indigo-300 transition">Home</a>
-                <a href="{% url 'about' %}" class="hover:text-indigo-300 transition">About Us</a>
-                <a href="{% url 'room_list' %}" class="hover:text-indigo-300 transition">Rooms</a>
+            <div id="home-nav-links" class="hidden flex-col items-stretch gap-3 absolute top-full left-0 right-0 bg-indigo-900 px-6 pb-5 pt-2 shadow-xl border-t border-white/10
+                        md:flex md:flex-row md:items-center md:gap-6 md:static md:bg-transparent md:px-0 md:pb-0 md:pt-0 md:shadow-none md:border-0">
+                <a href="{% url 'home' %}" class="hover:text-indigo-300 transition py-1">Home</a>
+                <a href="{% url 'about' %}" class="hover:text-indigo-300 transition py-1">About Us</a>
+                <a href="{% url 'room_list' %}" class="hover:text-indigo-300 transition py-1">Rooms</a>
                 {% if not user.is_authenticated %}
                     <!-- Guest Links -->
                     <a href="{% url 'login' %}" class="px-4 py-2 border border-white rounded hover:bg-white hover:text-indigo-900 transition">Login</a>
@@ -78,7 +84,7 @@
                     <!-- Logout Button -->
                     <form action="{% url 'logout' %}" method="post" class="inline">
                         {% csrf_token %}
-                        <button type="submit" class="ml-4 text-gray-300 hover:text-red-400 transition" title="Logout">
+                        <button type="submit" class="md:ml-4 text-gray-300 hover:text-red-400 transition" title="Logout">
                             <i class="fa-solid fa-right-from-bracket"></i>
                         </button>
                     </form>
@@ -110,5 +116,17 @@
         <p>&copy; 2025 Grand Hotel System. All rights reserved.</p>
     </footer>
 
+    <script>
+      (function () {
+        var btn = document.getElementById('home-menu-btn');
+        var menu = document.getElementById('home-nav-links');
+        if (btn && menu) {
+          btn.addEventListener('click', function () {
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('flex');
+          });
+        }
+      })();
+    </script>
 </body>
 </html>

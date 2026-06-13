@@ -17,16 +17,17 @@
   .sidebar-link:hover { background-color: rgba(255,255,255,0.15); transform: translateX(4px); }
   .sidebar-link.active { background: linear-gradient(to right, #c4b5fd, #a78bfa); color: #4c1d95; font-weight: 700; box-shadow: 0 0 15px rgba(167, 139, 250, 0.5); }
  </style>
+  {% include 'common/_table_css.html' %}
 </head>
 <body class="flex min-h-screen">
   <!-- Sidebar -->
-  <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-2xl transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+  <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-2xl flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300">
     <div class="flex items-center justify-center p-6 border-b border-white/20">
       <i data-lucide="concierge-bell" class="w-8 h-8 mr-3 text-purple-300"></i>
       <h1 class="text-xl font-bold tracking-wide">Front Desk</h1>
     </div>
 
-    <nav class="p-4 space-y-2 flex-1">
+    <nav class="p-4 space-y-2 flex-1 min-h-0 overflow-y-auto">
       <a href="{% url 'receptionist_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'receptionist_dashboard' %}active{% endif %}">
         <i data-lucide="layout-grid" class="w-5 h-5 mr-3"></i> Dashboard
       </a>
@@ -55,7 +56,7 @@
     </nav>
 
     <!-- User Profile Snippet -->
-    <div class="absolute bottom-0 w-full bg-black/10 border-t border-white/20">
+    <div class="mt-auto shrink-0 w-full bg-black/10 border-t border-white/20">
        <div class="p-4 flex items-center gap-3">
            {% if user.profile_picture %}
                <img src="{{ user.profile_picture.url }}" class="w-10 h-10 rounded-full border-2 border-purple-300 object-cover">

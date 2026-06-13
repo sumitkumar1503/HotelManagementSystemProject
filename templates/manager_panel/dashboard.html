@@ -42,7 +42,7 @@
             <h2 class="text-lg font-bold text-gray-800">Recent Bookings</h2>
         </div>
         <div class="overflow-x-auto">
-        <table class="w-full text-left min-w-[560px]">
+        <table class="rtable w-full text-left min-w-[560px]">
             <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                 <tr>
                     <th class="px-6 py-3">Guest</th>
@@ -54,10 +54,10 @@
             <tbody class="divide-y divide-gray-100">
                 {% for booking in recent_bookings %}
                 <tr class="hover:bg-emerald-50/40">
-                    <td class="px-6 py-4 font-semibold text-gray-800">{{ booking.user.get_full_name|default:booking.user.username }}</td>
-                    <td class="px-6 py-4">Room {{ booking.room.room_number }}</td>
-                    <td class="px-6 py-4 text-sm">{{ booking.status }}</td>
-                    <td class="px-6 py-4 text-right font-bold">{{ site_currency }}{{ booking.total_amount }}</td>
+                    <td data-label="Guest" class="px-6 py-4 font-semibold text-gray-800">{{ booking.user.get_full_name|default:booking.user.username }}</td>
+                    <td data-label="Room" class="px-6 py-4">Room {{ booking.room.room_number }}</td>
+                    <td data-label="Status" class="px-6 py-4 text-sm">{{ booking.status }}</td>
+                    <td data-label="Amount" class="px-6 py-4 text-right font-bold">{{ site_currency }}{{ booking.total_amount }}</td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="4" class="p-8 text-center text-gray-500">No bookings found.</td></tr>

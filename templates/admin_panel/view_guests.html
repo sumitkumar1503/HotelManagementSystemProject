@@ -15,7 +15,7 @@
     <!-- Table Card -->
     <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+            <table class="rtable w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-gray-50 text-gray-700 text-sm uppercase tracking-wider border-b">
                         <th class="p-4 font-semibold">Guest</th>
@@ -28,7 +28,7 @@
                 <tbody class="divide-y divide-gray-100">
                     {% for guest in guests %}
                     <tr class="hover:bg-blue-50 transition group">
-                        <td class="p-4 flex items-center gap-3">
+                        <td data-label="Guest" class="p-4 flex items-center gap-3">
                             {% if guest.user.profile_picture %}
                                 <img src="{{ guest.user.profile_picture.url }}" class="w-10 h-10 rounded-full object-cover border border-gray-200">
                             {% else %}
@@ -41,19 +41,19 @@
                                 <p class="text-xs text-gray-500">@{{ guest.user.username }}</p>
                             </div>
                         </td>
-                        <td class="p-4">
+                        <td data-label="Contact Info" class="p-4">
                             <div class="text-sm text-gray-600 flex flex-col">
                                 <span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i> {{ guest.user.mobile }}</span>
                                 <span class="flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> {{ guest.user.email }}</span>
                             </div>
                         </td>
-                        <td class="p-4 text-sm text-gray-600 max-w-xs truncate" title="{{ guest.address }}">
+                        <td data-label="Address" class="p-4 text-sm text-gray-600 md:max-w-xs md:truncate" title="{{ guest.address }}">
                             {{ guest.address }}
                         </td>
-                        <td class="p-4 text-sm text-gray-500">
+                        <td data-label="Joined Date" class="p-4 text-sm text-gray-500">
                             {{ guest.user.date_joined|date:"M d, Y" }}
                         </td>
-                        <td class="p-4 text-right">
+                        <td class="rtable-actions p-4 text-right">
                             <div class="flex justify-end gap-2">
                                 <a href="{% url 'edit_guest' guest.id %}" class="p-2 text-blue-600 hover:bg-blue-100 rounded transition" title="Edit">
                                     <i data-lucide="edit-2" class="w-4 h-4"></i>

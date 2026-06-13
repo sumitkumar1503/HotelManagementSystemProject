@@ -43,7 +43,7 @@
             <h3 class="font-bold text-gray-700">Delivery Log</h3>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+            <table class="rtable w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white text-gray-500 text-xs uppercase font-semibold border-b">
                         <th class="px-6 py-4">Date & Time</th>
@@ -56,21 +56,21 @@
                 <tbody class="divide-y divide-gray-100">
                     {% for order in orders %}
                     <tr class="hover:bg-orange-50 transition">
-                        <td class="px-6 py-4 text-sm text-gray-600">
+                        <td data-label="Date & Time" class="px-6 py-4 text-sm text-gray-600">
                             <div class="font-bold text-gray-800">{{ order.created_at|date:"M d, Y" }}</div>
                             <div class="text-xs">{{ order.created_at|date:"H:i A" }}</div>
                         </td>
-                        <td class="px-6 py-4">
+                        <td data-label="Room" class="px-6 py-4">
                             <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded font-bold text-xs border border-gray-200">
                                 Room {{ order.booking.room.room_number }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                        <td data-label="Items" class="px-6 py-4 text-sm text-gray-600 md:max-w-xs md:truncate">
                             {% for item in order.items.all %}
                                 {{ item.name }}{% if not forloop.last %}, {% endif %}
                             {% endfor %}
                         </td>
-                        <td class="px-6 py-4">
+                        <td data-label="Delivered By" class="px-6 py-4">
                             {% if order.chef %}
                                 <div class="flex items-center gap-2">
                                     <i data-lucide="user-check" class="w-4 h-4 text-green-500"></i>
@@ -80,7 +80,7 @@
                                 <span class="text-gray-400 text-xs italic">Unknown</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 text-right font-bold text-orange-600">
+                        <td data-label="Value" class="px-6 py-4 text-right font-bold text-orange-600">
                             {{ site_currency }}{{ order.total_price }}
                         </td>
                     </tr>

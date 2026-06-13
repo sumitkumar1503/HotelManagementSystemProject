@@ -56,19 +56,20 @@
   }
 </style>
 
+  {% include 'common/_table_css.html' %}
 </head>
 <body class="bg-gray-50">
 
 <div class="flex min-h-screen">
   <!-- Sidebar -->
-  <aside id="sidebar" class="sidebar w-64 flex-shrink-0 fixed inset-y-0 left-0 z-30 transform -translate-x-full md:translate-x-0 shadow-xl transition-transform duration-300">
+  <aside id="sidebar" class="sidebar w-64 flex-shrink-0 fixed inset-y-0 left-0 z-30 flex flex-col transform -translate-x-full md:translate-x-0 shadow-xl transition-transform duration-300">
     <!-- Brand Logo Area -->
     <div class="flex items-center justify-center p-6 border-b border-white/30">
       <i data-lucide="sparkles" class="w-8 h-8 mr-3 text-yellow-300"></i>
       <h1 class="text-xl font-bold tracking-wide">Housekeeping</h1>
     </div>
 
-    <nav class="flex-1 px-4 py-6 space-y-2">
+    <nav class="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-2">
       
       <!-- Dashboard -->
       <a href="{% url 'housekeeping_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'housekeeping_dashboard' %}active{% endif %}">
@@ -96,7 +97,7 @@
     </nav>
 
     <!-- Logout Section -->
-    <div class="px-4 py-6 border-t border-white/30">
+    <div class="shrink-0 px-4 py-6 border-t border-white/30">
       <form action="{% url 'logout' %}" method="post">
         {% csrf_token %}
         <button type="submit" class="w-full sidebar-link flex items-center p-3 rounded-lg text-red-100 hover:bg-red-500 hover:text-white transition">

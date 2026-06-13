@@ -7,7 +7,7 @@
 
     <div class="bg-white rounded-xl shadow-lg border border-purple-100 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+            <table class="rtable w-full text-left border-collapse">
                 <thead class="bg-purple-50 text-purple-900 text-xs uppercase font-semibold border-b border-purple-100">
                     <tr>
                         <th class="px-6 py-4">Guest Name</th>
@@ -20,7 +20,7 @@
                 <tbody class="divide-y divide-gray-100">
                     {% for guest in guests %}
                     <tr class="hover:bg-purple-50/50 transition">
-                        <td class="px-6 py-4">
+                        <td data-label="Guest Name" class="px-6 py-4">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold text-xs">
                                     {{ guest.user.username|first|upper }}
@@ -28,16 +28,16 @@
                                 <span class="font-bold text-gray-800">{{ guest.user.get_full_name|default:guest.user.username }}</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600">
+                        <td data-label="Contact" class="px-6 py-4 text-sm text-gray-600">
                             {{ guest.user.mobile }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600">
+                        <td data-label="Email" class="px-6 py-4 text-sm text-gray-600">
                             {{ guest.user.email|default:"-" }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">
+                        <td data-label="Address" class="px-6 py-4 text-sm text-gray-600 md:truncate md:max-w-xs">
                             {{ guest.address|default:"Walk-in" }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">
+                        <td data-label="Joined" class="px-6 py-4 text-sm text-gray-500">
                             {{ guest.user.date_joined|date:"M d, Y" }}
                         </td>
                     </tr>

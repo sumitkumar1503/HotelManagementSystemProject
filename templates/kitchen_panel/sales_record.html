@@ -23,7 +23,7 @@
     <!-- Food Orders -->
     <h3 class="text-xl font-bold text-gray-800 mb-3">Food Orders</h3>
     <div class="bg-white rounded-xl shadow border border-gray-100 overflow-x-auto mb-10">
-        <table class="w-full text-left min-w-[640px]">
+        <table class="rtable w-full text-left min-w-[640px]">
             <thead class="bg-orange-50 text-orange-900 text-xs uppercase font-semibold border-b">
                 <tr>
                     <th class="px-6 py-3">Order</th>
@@ -37,12 +37,12 @@
             <tbody class="divide-y divide-gray-100">
                 {% for order in food_orders %}
                 <tr class="hover:bg-orange-50/40">
-                    <td class="px-6 py-4 font-bold">#{{ order.id }}</td>
-                    <td class="px-6 py-4">{{ order.booking.room.room_number }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600">{% for item in order.items.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
-                    <td class="px-6 py-4 font-semibold">{{ site_currency }}{{ order.total_price }}</td>
-                    <td class="px-6 py-4 text-sm">{{ order.get_status_display }}</td>
-                    <td class="px-6 py-4 text-right">
+                    <td data-label="Order" class="px-6 py-4 font-bold">#{{ order.id }}</td>
+                    <td data-label="Room" class="px-6 py-4">{{ order.booking.room.room_number }}</td>
+                    <td data-label="Items" class="px-6 py-4 text-sm text-gray-600">{% for item in order.items.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+                    <td data-label="Total" class="px-6 py-4 font-semibold">{{ site_currency }}{{ order.total_price }}</td>
+                    <td data-label="Status" class="px-6 py-4 text-sm">{{ order.get_status_display }}</td>
+                    <td data-label="Payment" class="px-6 py-4 text-right">
                         {% if order.is_paid %}
                             <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Paid</span>
                         {% else %}
@@ -60,7 +60,7 @@
     <!-- Bar Orders -->
     <h3 class="text-xl font-bold text-gray-800 mb-3">Bar Orders</h3>
     <div class="bg-white rounded-xl shadow border border-gray-100 overflow-x-auto">
-        <table class="w-full text-left min-w-[640px]">
+        <table class="rtable w-full text-left min-w-[640px]">
             <thead class="bg-fuchsia-50 text-fuchsia-900 text-xs uppercase font-semibold border-b">
                 <tr>
                     <th class="px-6 py-3">Order</th>
@@ -74,12 +74,12 @@
             <tbody class="divide-y divide-gray-100">
                 {% for order in bar_orders %}
                 <tr class="hover:bg-fuchsia-50/40">
-                    <td class="px-6 py-4 font-bold">#{{ order.id }}</td>
-                    <td class="px-6 py-4">{{ order.booking.room.room_number }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600">{% for item in order.items.all %}{{ item.quantity }}x {{ item.drink.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
-                    <td class="px-6 py-4 font-semibold">{{ site_currency }}{{ order.total_price }}</td>
-                    <td class="px-6 py-4 text-sm">{{ order.get_status_display }}</td>
-                    <td class="px-6 py-4 text-right">
+                    <td data-label="Order" class="px-6 py-4 font-bold">#{{ order.id }}</td>
+                    <td data-label="Room" class="px-6 py-4">{{ order.booking.room.room_number }}</td>
+                    <td data-label="Items" class="px-6 py-4 text-sm text-gray-600">{% for item in order.items.all %}{{ item.quantity }}x {{ item.drink.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+                    <td data-label="Total" class="px-6 py-4 font-semibold">{{ site_currency }}{{ order.total_price }}</td>
+                    <td data-label="Status" class="px-6 py-4 text-sm">{{ order.get_status_display }}</td>
+                    <td data-label="Payment" class="px-6 py-4 text-right">
                         {% if order.is_paid %}
                             <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Paid</span>
                         {% else %}

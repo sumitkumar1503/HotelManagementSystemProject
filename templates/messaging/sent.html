@@ -5,7 +5,7 @@
 
 <div class="max-w-5xl mx-auto">
   <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-x-auto">
-    <table class="w-full text-left min-w-[600px]">
+    <table class="rtable w-full text-left min-w-[600px]">
         <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b">
             <tr>
                 <th class="px-6 py-3">To</th>
@@ -17,12 +17,12 @@
         <tbody class="divide-y divide-gray-100">
             {% for msg in messages_list %}
             <tr class="hover:bg-indigo-50/40 transition">
-                <td class="px-6 py-4">
+                <td data-label="To" class="px-6 py-4">
                     <span class="px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-600 border border-indigo-100">{{ msg.target_label }}</span>
                 </td>
-                <td class="px-6 py-4 text-gray-700">{{ msg.subject|default:"(No subject)" }}</td>
-                <td class="px-6 py-4 text-sm text-gray-500">{{ msg.created_at|date:"M d, H:i" }}</td>
-                <td class="px-6 py-4 text-right">
+                <td data-label="Subject" class="px-6 py-4 text-gray-700">{{ msg.subject|default:"(No subject)" }}</td>
+                <td data-label="Sent" class="px-6 py-4 text-sm text-gray-500">{{ msg.created_at|date:"M d, H:i" }}</td>
+                <td class="rtable-actions px-6 py-4 text-right">
                     <a href="{% url 'view_message' msg.id %}" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100">View</a>
                 </td>
             </tr>

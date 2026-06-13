@@ -14,16 +14,17 @@
   .sidebar-link:hover { background-color: rgba(255,255,255,0.1); transform: translateX(4px); }
   .sidebar-link.active { background: linear-gradient(to right, #fb923c, #f97316); color: white; font-weight: 700; }
  </style>
+  {% include 'common/_table_css.html' %}
 </head>
 <body class="flex min-h-screen">
   <!-- Sidebar -->
-  <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+  <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300">
     <div class="flex items-center justify-center p-6 border-b border-white/20">
       <i data-lucide="chef-hat" class="w-8 h-8 mr-3 text-orange-300"></i>
       <h1 class="text-xl font-bold">Kitchen</h1>
     </div>
     
-    <nav class="p-4 space-y-2 flex-1">
+    <nav class="p-4 space-y-2 flex-1 min-h-0 overflow-y-auto">
       <!-- Dashboard Link -->
       <a href="{% url 'kitchen_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'kitchen_dashboard' %}active{% endif %}">
         <i data-lucide="utensils" class="w-5 h-5 mr-3"></i> Active Orders
@@ -52,7 +53,7 @@
     </nav>
 
     <!-- User Info & Logout -->
-    <div class="absolute bottom-0 w-full bg-black/10 border-t border-white/20">
+    <div class="mt-auto shrink-0 w-full bg-black/10 border-t border-white/20">
        <div class="p-4 flex items-center gap-3">
            {% if user.profile_picture %}
                <img src="{{ user.profile_picture.url }}" class="w-10 h-10 rounded-full border-2 border-orange-300 object-cover">

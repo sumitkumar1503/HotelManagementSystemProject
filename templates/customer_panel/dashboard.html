@@ -70,7 +70,7 @@
         </div>
         
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
+            <table class="rtable w-full text-left">
                 <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                     <tr>
                         <th class="px-6 py-4">Room</th>
@@ -83,7 +83,7 @@
                     {% for booking in bookings %}
                     <tr class="hover:bg-blue-50/30 transition duration-150 group">
                         <!-- Room Column -->
-                        <td class="px-6 py-4">
+                        <td data-label="Room" class="px-6 py-4">
                             <div class="flex items-center gap-4">
                                 {% if booking.room.room_image %}
                                     <img src="{{ booking.room.room_image.url }}" class="w-12 h-12 rounded-lg object-cover border border-gray-200 shadow-sm group-hover:scale-105 transition">
@@ -100,7 +100,7 @@
                         </td>
 
                         <!-- Dates Column -->
-                        <td class="px-6 py-4">
+                        <td data-label="Dates" class="px-6 py-4">
                             <div class="text-sm text-gray-600">
                                 <div class="flex items-center gap-2">
                                     <i data-lucide="calendar" class="w-4 h-4 text-gray-400"></i>
@@ -112,7 +112,7 @@
                         </td>
 
                         <!-- Status Column -->
-                        <td class="px-6 py-4">
+                        <td data-label="Status" class="px-6 py-4">
                             {% if booking.status == 'Checked Out' %}
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
                                     Completed
@@ -129,7 +129,7 @@
                         </td>
 
                         <!-- Price Column -->
-                        <td class="px-6 py-4 text-right">
+                        <td data-label="Amount" class="px-6 py-4 text-right">
                             <p class="font-bold text-gray-800">{{ site_currency }}{{ booking.room.price_per_night }}</p>
                             <p class="text-[10px] text-gray-400 uppercase">Per Night</p>
                         </td>

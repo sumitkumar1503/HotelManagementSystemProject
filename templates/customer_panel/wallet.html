@@ -15,7 +15,7 @@
 
     <h2 class="text-xl font-bold text-gray-800 mb-4">Transaction History</h2>
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-        <table class="w-full text-left min-w-[560px]">
+        <table class="rtable w-full text-left min-w-[560px]">
             <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b">
                 <tr>
                     <th class="px-6 py-3">Type</th>
@@ -27,16 +27,16 @@
             <tbody class="divide-y divide-gray-100">
                 {% for txn in transactions %}
                 <tr>
-                    <td class="px-6 py-4">
+                    <td data-label="Type" class="px-6 py-4">
                         {% if txn.txn_type == 'credit' %}
                             <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Credit</span>
                         {% else %}
                             <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">Debit</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-600">{{ txn.reason }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500">{{ txn.created_at|date:"M d, Y H:i" }}</td>
-                    <td class="px-6 py-4 text-right font-bold {% if txn.txn_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
+                    <td data-label="Reason" class="px-6 py-4 text-sm text-gray-600">{{ txn.reason }}</td>
+                    <td data-label="Date" class="px-6 py-4 text-sm text-gray-500">{{ txn.created_at|date:"M d, Y H:i" }}</td>
+                    <td data-label="Amount" class="px-6 py-4 text-right font-bold {% if txn.txn_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
                         {% if txn.txn_type == 'credit' %}+{% else %}-{% endif %}{{ site_currency }}{{ txn.amount }}
                     </td>
                 </tr>

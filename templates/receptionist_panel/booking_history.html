@@ -10,7 +10,7 @@
 
     <div class="bg-white rounded-xl shadow-lg border border-purple-100 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+            <table class="rtable w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-purple-50 text-purple-900 text-sm uppercase tracking-wider border-b border-purple-100">
                         <th class="p-4 font-semibold">Guest Info</th>
@@ -25,7 +25,7 @@
                     {% for booking in bookings %}
                     <tr class="hover:bg-purple-50/50 transition group align-top">
                         <!-- Guest Info -->
-                        <td class="p-4">
+                        <td data-label="Guest Info" class="p-4">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold">
                                     {{ booking.user.username|first|upper }}
@@ -38,7 +38,7 @@
                         </td>
 
                         <!-- Room Info -->
-                        <td class="p-4">
+                        <td data-label="Room" class="p-4">
                             <span class="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg font-bold text-sm border border-purple-100 block w-fit mb-1">
                                 Room {{ booking.room.room_number }}
                             </span>
@@ -46,7 +46,7 @@
                         </td>
 
                         <!-- Check In Column -->
-                        <td class="p-4">
+                        <td data-label="Check In" class="p-4">
                             <div class="flex flex-col gap-1">
                                 <div>
                                     <span class="text-[10px] font-bold text-gray-400 uppercase">Plan</span>
@@ -64,7 +64,7 @@
                         </td>
 
                         <!-- Check Out Column -->
-                        <td class="p-4">
+                        <td data-label="Check Out" class="p-4">
                             <div class="flex flex-col gap-1">
                                 <div>
                                     <span class="text-[10px] font-bold text-gray-400 uppercase">Plan</span>
@@ -82,7 +82,7 @@
                         </td>
 
                         <!-- Status Badge -->
-                        <td class="p-4">
+                        <td data-label="Status" class="p-4">
                             {% if booking.status == 'Checked Out' %}
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Completed</span>
                             {% elif booking.status == 'Checked In' %}
@@ -93,7 +93,7 @@
                         </td>
 
                         <!-- Actions -->
-                        <td class="p-4 text-right">
+                        <td class="rtable-actions p-4 text-right">
                             {% if booking.status == 'Booked' %}
                                 <a href="{% url 'staff_check_in' booking.id %}" class="inline-flex items-center px-3 py-2 bg-purple-600 text-white text-xs font-bold rounded hover:bg-purple-700 transition shadow-sm">
                                     Check In

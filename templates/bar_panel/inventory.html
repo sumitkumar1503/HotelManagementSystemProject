@@ -13,7 +13,7 @@
     </div>
 
     <div class="bg-white rounded-xl shadow-lg border border-fuchsia-100 overflow-x-auto">
-        <table class="w-full text-left min-w-[640px]">
+        <table class="rtable w-full text-left min-w-[640px]">
             <thead class="bg-fuchsia-50 text-fuchsia-900 text-xs uppercase font-semibold border-b border-fuchsia-100">
                 <tr>
                     <th class="px-6 py-4">Drink</th>
@@ -27,7 +27,7 @@
             <tbody class="divide-y divide-gray-100">
                 {% for drink in drinks %}
                 <tr class="hover:bg-fuchsia-50/40 transition">
-                    <td class="px-6 py-4">
+                    <td data-label="Drink" class="px-6 py-4">
                         <div class="flex items-center gap-3">
                             {% if drink.image %}
                                 <img src="{{ drink.image.url }}" class="w-10 h-10 rounded-lg object-cover border">
@@ -37,19 +37,19 @@
                             <span class="font-bold text-gray-800">{{ drink.name }}</span>
                         </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">{{ drink.get_category_display }}</td>
-                    <td class="px-6 py-4 font-semibold text-gray-800">{{ site_currency }}{{ drink.price }}</td>
-                    <td class="px-6 py-4">
+                    <td data-label="Category" class="px-6 py-4 text-sm text-gray-500">{{ drink.get_category_display }}</td>
+                    <td data-label="Price" class="px-6 py-4 font-semibold text-gray-800">{{ site_currency }}{{ drink.price }}</td>
+                    <td data-label="Stock" class="px-6 py-4">
                         <span class="font-bold {% if drink.stock_quantity <= 5 %}text-red-600{% else %}text-gray-800{% endif %}">{{ drink.stock_quantity }}</span>
                     </td>
-                    <td class="px-6 py-4">
+                    <td data-label="Status" class="px-6 py-4">
                         {% if drink.is_available and drink.stock_quantity > 0 %}
                             <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Available</span>
                         {% else %}
                             <span class="px-2 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded">Out</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 text-right">
+                    <td class="rtable-actions px-6 py-4 text-right">
                         <div class="flex items-center justify-end gap-2">
                             <a href="{% url 'restock_drink' drink.id %}" class="px-3 py-1.5 bg-green-50 text-green-600 text-xs font-bold rounded hover:bg-green-100">Restock</a>
                             <a href="{% url 'edit_drink' drink.id %}" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</a>
