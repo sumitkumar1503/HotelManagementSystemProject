@@ -96,7 +96,11 @@
 
                         <!-- Status Column -->
                         <td class="px-6 py-4">
-                            {% if booking.status == 'Checked Out' %}
+                            {% if booking.status == 'Cancelled' %}
+                                <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded border border-red-200">
+                                    Cancelled
+                                </span>
+                            {% elif booking.status == 'Checked Out' %}
                                 <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded border border-gray-200">
                                     Completed
                                 </span>
@@ -113,19 +117,30 @@
 
                         <!-- Price Column -->
                         <td class="px-6 py-4 text-right font-bold text-gray-800">
-                            ${{ booking.room.price_per_night }}
+                            {{ site_currency }}{{ booking.room.price_per_night }}
                         </td>
 
                         <!-- Payment Column -->
                         <td class="px-6 py-4 text-right">
-                            {% if booking.is_paid %}
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                                    <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> Paid
-                                </span>
+                            {% if booking.status == 'Cancelled' %}
+                                <span class="text-xs text-gray-400 italic">—</span>
                             {% else %}
-                                <a href="{% url 'pay_booking' booking.id %}" class="inline-flex items-center px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 shadow-sm transition">
-                                    <i data-lucide="credit-card" class="w-3 h-3 mr-1"></i> Pay Now
-                                </a>
+                                <div class="flex flex-col items-end gap-2">
+                                    {% if booking.is_paid %}
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
+                                            <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> Paid
+                                        </span>
+                                    {% else %}
+                                        <a href="{% url 'pay_booking' booking.id %}" class="inline-flex items-center px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 shadow-sm transition">
+                                            <i data-lucide="credit-card" class="w-3 h-3 mr-1"></i> Pay Now
+                                        </a>
+                                    {% endif %}
+                                    {% if not booking.actual_check_in %}
+                                        <a href="{% url 'cancel_booking' booking.id %}" onclick="return confirm('Cancel this booking? If paid, the amount will be refunded to your credit wallet.');" class="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition">
+                                            <i data-lucide="x-circle" class="w-3 h-3 mr-1"></i> Cancel
+                                        </a>
+                                    {% endif %}
+                                </div>
                             {% endif %}
                         </td>
                     </tr>

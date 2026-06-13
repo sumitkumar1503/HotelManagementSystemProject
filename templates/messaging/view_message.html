@@ -1,0 +1,31 @@
+{% extends 'messaging/messagebase.html' %}
+{% block title %}Message{% endblock %}
+{% block message_content %}
+<div class="max-w-2xl mx-auto">
+    <a href="{% url 'inbox' %}" class="text-sm text-gray-500 hover:text-indigo-600 flex items-center gap-1 mb-4">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+    </a>
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 bg-gray-50">
+            <h1 class="text-2xl font-bold text-gray-800">{{ msg.subject|default:"(No subject)" }}</h1>
+            <div class="flex items-center justify-between mt-3 text-sm text-gray-500">
+                <div>
+                    <span class="font-semibold text-gray-700">From:</span> {{ msg.sender.get_full_name|default:msg.sender.username }}
+                    <span class="mx-2">→</span>
+                    <span class="font-semibold text-gray-700">To:</span> {{ msg.recipient.get_full_name|default:msg.recipient.username }}
+                </div>
+                <span>{{ msg.created_at|date:"M d, Y H:i" }}</span>
+            </div>
+        </div>
+        <div class="p-6 text-gray-700 whitespace-pre-line leading-relaxed">{{ msg.body }}</div>
+        <div class="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+            {% if msg.sender != user %}
+            <a href="{% url 'compose_message' %}?to={{ msg.sender.id }}" class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700">
+                <i data-lucide="reply" class="w-4 h-4 inline mr-1"></i> Reply
+            </a>
+            {% endif %}
+            <a href="{% url 'delete_message' msg.id %}" onclick="return confirm('Delete this message?');" class="px-4 py-2 bg-red-50 text-red-600 text-sm font-bold rounded-lg hover:bg-red-100">Delete</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

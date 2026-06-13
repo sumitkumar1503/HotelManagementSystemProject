@@ -1,0 +1,67 @@
+{% extends 'bar_panel/barbase.html' %}
+{% block title %}Bar Inventory{% endblock %}
+{% block bar_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Bar Inventory</h2>
+            <p class="text-gray-500">Manage drinks and restock for proper stock keeping.</p>
+        </div>
+        <a href="{% url 'add_drink' %}" class="px-5 py-2.5 bg-fuchsia-600 text-white font-bold rounded-lg hover:bg-fuchsia-700 shadow transition flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Drink
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-fuchsia-100 overflow-hidden">
+        <table class="w-full text-left">
+            <thead class="bg-fuchsia-50 text-fuchsia-900 text-xs uppercase font-semibold border-b border-fuchsia-100">
+                <tr>
+                    <th class="px-6 py-4">Drink</th>
+                    <th class="px-6 py-4">Category</th>
+                    <th class="px-6 py-4">Price</th>
+                    <th class="px-6 py-4">Stock</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for drink in drinks %}
+                <tr class="hover:bg-fuchsia-50/40 transition">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            {% if drink.image %}
+                                <img src="{{ drink.image.url }}" class="w-10 h-10 rounded-lg object-cover border">
+                            {% else %}
+                                <div class="w-10 h-10 bg-fuchsia-100 text-fuchsia-500 rounded-lg flex items-center justify-center"><i data-lucide="wine" class="w-5 h-5"></i></div>
+                            {% endif %}
+                            <span class="font-bold text-gray-800">{{ drink.name }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ drink.get_category_display }}</td>
+                    <td class="px-6 py-4 font-semibold text-gray-800">{{ site_currency }}{{ drink.price }}</td>
+                    <td class="px-6 py-4">
+                        <span class="font-bold {% if drink.stock_quantity <= 5 %}text-red-600{% else %}text-gray-800{% endif %}">{{ drink.stock_quantity }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if drink.is_available and drink.stock_quantity > 0 %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Available</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded">Out</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url 'restock_drink' drink.id %}" class="px-3 py-1.5 bg-green-50 text-green-600 text-xs font-bold rounded hover:bg-green-100">Restock</a>
+                            <a href="{% url 'edit_drink' drink.id %}" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</a>
+                            <a href="{% url 'delete_drink' drink.id %}" onclick="return confirm('Delete {{ drink.name }}?');" class="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100">Delete</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="p-10 text-center text-gray-500">No drinks yet. Add your first drink.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

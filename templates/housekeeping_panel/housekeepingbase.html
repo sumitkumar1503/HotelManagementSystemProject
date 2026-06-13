@@ -83,6 +83,12 @@
       </a>
 
       
+<a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+    <i data-lucide="mail" class="w-5 h-5 mr-4"></i>
+    <span>Messages</span>
+    {% if unread_messages %}<span class="ml-auto bg-teal-400 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
+</a>
+
 <a href="{% url 'housekeeping_profile' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'housekeeping_profile' %}active{% endif %}">
     <i data-lucide="user-circle" class="w-5 h-5 mr-4"></i>
     <span>My Profile</span>

@@ -48,6 +48,38 @@ urlpatterns = [
 
     # Admin Payment Settings
     path('dashboard/admin/payment-settings/', views.payment_settings, name='payment_settings'),
+    path('dashboard/admin/site-settings/', views.site_settings, name='site_settings'),
+
+    # Multi-branch Management (Admin / Manager)
+    path('dashboard/branches/', views.manage_branches, name='manage_branches'),
+    path('dashboard/branches/add/', views.add_branch, name='add_branch'),
+    path('dashboard/branches/edit/<int:branch_id>/', views.edit_branch, name='edit_branch'),
+    path('dashboard/branches/delete/<int:branch_id>/', views.delete_branch, name='delete_branch'),
+    path('dashboard/branches/switch/<int:branch_id>/', views.switch_branch, name='switch_branch'),
+    path('dashboard/manager/', views.manager_dashboard, name='manager_dashboard'),
+
+    # In-app Messaging (all users)
+    path('messages/', views.inbox, name='inbox'),
+    path('messages/sent/', views.sent_messages, name='sent_messages'),
+    path('messages/compose/', views.compose_message, name='compose_message'),
+    path('messages/<int:message_id>/', views.view_message, name='view_message'),
+    path('messages/<int:message_id>/delete/', views.delete_message, name='delete_message'),
+
+    # Bar - Staff
+    path('dashboard/bar/', views.bar_dashboard, name='bar_dashboard'),
+    path('dashboard/bar/status/<int:order_id>/<str:status>/', views.update_bar_order_status, name='update_bar_order_status'),
+    path('dashboard/bar/history/', views.bar_history, name='bar_history'),
+    path('dashboard/bar/inventory/', views.bar_inventory, name='bar_inventory'),
+    path('dashboard/bar/inventory/add/', views.add_drink, name='add_drink'),
+    path('dashboard/bar/inventory/edit/<int:drink_id>/', views.edit_drink, name='edit_drink'),
+    path('dashboard/bar/inventory/delete/<int:drink_id>/', views.delete_drink, name='delete_drink'),
+    path('dashboard/bar/inventory/restock/<int:drink_id>/', views.restock_drink, name='restock_drink'),
+    path('dashboard/bar/profile/', views.bar_profile, name='bar_profile'),
+
+    # Sales Record (Kitchen + Bar)
+    path('dashboard/sales/', views.sales_record, name='sales_record'),
+    path('dashboard/sales/food-paid/<int:order_id>/', views.mark_food_paid, name='mark_food_paid'),
+    path('dashboard/sales/bar-paid/<int:order_id>/', views.mark_bar_paid, name='mark_bar_paid'),
 
     # Customer Staff
     path('dashboard/customer/', views.customer_dashboard, name='customer_dashboard'),
@@ -58,6 +90,10 @@ urlpatterns = [
     path('dashboard/customer/pay/<int:booking_id>/', views.pay_booking, name='pay_booking'),
     path('dashboard/customer/receipt/edit/<int:receipt_id>/', views.edit_receipt, name='edit_receipt'),
     path('dashboard/customer/receipt/delete/<int:receipt_id>/', views.delete_receipt, name='delete_receipt'),
+    path('dashboard/customer/order-drinks/', views.order_drinks, name='order_drinks'),
+    path('dashboard/customer/bar-orders/', views.customer_bar_history, name='customer_bar_history'),
+    path('dashboard/customer/wallet/', views.customer_wallet, name='customer_wallet'),
+    path('dashboard/customer/cancel/<int:booking_id>/', views.cancel_booking, name='cancel_booking'),
 
 
     # Kitchen Staff

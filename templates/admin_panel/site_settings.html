@@ -1,0 +1,47 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}Site Settings{% endblock %}
+{% block admin_content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Currency & VAT Settings</h1>
+        <p class="text-gray-500">Change the currency used across the site and the VAT applied to rooms and products.</p>
+    </div>
+
+    <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+            {% if form.errors %}<div class="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{{ form.errors }}</div>{% endif %}
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Hotel Name</label>
+                {{ form.hotel_name }}
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Currency Symbol</label>
+                    {{ form.currency_symbol }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Currency Code</label>
+                    {{ form.currency_code }}
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">VAT Percentage (%)</label>
+                {{ form.vat_percentage }}
+                <p class="text-xs text-gray-400 mt-1">Applied to room listings and product menus.</p>
+            </div>
+            <div class="pt-4 border-t">
+                <button type="submit" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition">Save Settings</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="mt-6 p-4 bg-blue-50 rounded-xl text-sm text-blue-700">
+        Current: <strong>{{ settings.currency_symbol }} ({{ settings.currency_code }})</strong> &middot; VAT <strong>{{ settings.vat_percentage }}%</strong>
+    </div>
+</div>
+<style>
+    .form-input, .form-select { width: 100%; padding: 10px 15px; border: 1px solid #e5e7eb; border-radius: 8px; outline: none; color: #374151; }
+    .form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+</style>
+{% endblock %}

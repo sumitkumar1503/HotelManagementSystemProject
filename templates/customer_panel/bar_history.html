@@ -1,0 +1,42 @@
+{% extends 'customer_panel/customerbase.html' %}
+{% block title %}My Bar Orders{% endblock %}
+{% block customer_content %}
+<div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">My Bar Orders</h1>
+    <div class="space-y-4">
+        {% for order in orders %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="flex justify-between items-center mb-3">
+                <div>
+                    <p class="font-bold text-gray-800">Order #{{ order.id }}</p>
+                    <p class="text-xs text-gray-400">{{ order.created_at|date:"M d, Y H:i" }}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 rounded-full text-xs font-bold
+                        {% if order.status == 'served' %}bg-green-100 text-green-700{% elif order.status == 'preparing' %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %}">
+                        {{ order.get_status_display }}
+                    </span>
+                    {% if order.is_paid %}<span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">Paid</span>{% endif %}
+                </div>
+            </div>
+            <div class="border-t border-dashed pt-3 space-y-1">
+                {% for item in order.items.all %}
+                <div class="flex justify-between text-sm text-gray-600">
+                    <span>{{ item.quantity }}x {{ item.drink.name }}</span>
+                    <span>{{ site_currency }}{{ item.subtotal }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="flex justify-between mt-3 pt-3 border-t font-bold text-gray-800">
+                <span>Total</span><span class="text-fuchsia-600">{{ site_currency }}{{ order.total_price }}</span>
+            </div>
+        </div>
+        {% empty %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center text-gray-500">
+            <i data-lucide="martini" class="w-10 h-10 mx-auto text-gray-300 mb-2"></i>
+            <p>You haven't ordered any drinks yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

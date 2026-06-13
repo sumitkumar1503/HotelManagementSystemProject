@@ -1,0 +1,74 @@
+{% extends 'customer_panel/customerbase.html' %}
+{% block title %}Order Drinks{% endblock %}
+{% block customer_content %}
+<div class="max-w-6xl mx-auto pb-24">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Bar & Drinks</h1>
+            <p class="text-gray-500">Delivering to Room <span class="font-bold text-fuchsia-600">{{ room.room_number }}</span></p>
+        </div>
+    </div>
+
+    <form method="post" id="drinkForm">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {% for drink in drinks %}
+            <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+                <div class="h-40 bg-gray-100 overflow-hidden">
+                    {% if drink.image %}
+                        <img src="{{ drink.image.url }}" class="w-full h-full object-cover">
+                    {% else %}
+                        <div class="flex items-center justify-center h-full text-gray-300"><i data-lucide="wine" class="w-10 h-10"></i></div>
+                    {% endif %}
+                </div>
+                <div class="p-5">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-gray-800">{{ drink.name }}</h3>
+                        <span class="font-bold text-fuchsia-600" data-price="{{ drink.price }}">{{ site_currency }}{{ drink.price }}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 uppercase mt-1 tracking-wider">{{ drink.get_category_display }}</p>
+                    <div class="flex items-center justify-between mt-4">
+                        <span class="text-xs text-gray-400">In stock: {{ drink.stock_quantity }}</span>
+                        <input type="number" name="qty_{{ drink.id }}" min="0" max="{{ drink.stock_quantity }}" value="0"
+                               data-price="{{ drink.price }}"
+                               class="drink-qty w-20 p-2 border border-gray-200 rounded-lg text-center focus:ring-2 focus:ring-fuchsia-400 outline-none">
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-3 text-center py-12">
+                <p class="text-gray-500 text-lg">No drinks available right now.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:pl-64 z-40">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <div class="flex flex-col">
+                    <span class="text-gray-500 text-sm">Total Amount</span>
+                    <span class="text-2xl font-bold text-fuchsia-600" id="totalPrice">{{ site_currency }}0.00</span>
+                </div>
+                <button type="submit" class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition">Place Order</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    const symbol = "{{ site_currency }}";
+    document.addEventListener('DOMContentLoaded', function() {
+        const qtys = document.querySelectorAll('.drink-qty');
+        const totalDisplay = document.getElementById('totalPrice');
+        function calc() {
+            let total = 0;
+            qtys.forEach(q => {
+                const price = parseFloat(q.getAttribute('data-price'));
+                const val = parseInt(q.value) || 0;
+                total += price * val;
+            });
+            totalDisplay.textContent = symbol + total.toFixed(2);
+        }
+        qtys.forEach(q => q.addEventListener('input', calc));
+    });
+</script>
+{% endblock %}

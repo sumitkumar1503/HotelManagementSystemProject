@@ -60,8 +60,20 @@
                             <a href="{% url 'housekeeping_dashboard' %}" class="text-purple-400 font-semibold border border-purple-400 px-3 py-1 rounded hover:bg-purple-400 hover:text-indigo-900">
                                 <i class="fa-solid fa-broom"></i> Housekeeping
                             </a>
+                        {% elif user.employee_profile.job_type == 'bar' %}
+                            <a href="{% url 'bar_dashboard' %}" class="text-pink-400 font-semibold border border-pink-400 px-3 py-1 rounded hover:bg-pink-400 hover:text-indigo-900">
+                                <i class="fa-solid fa-martini-glass"></i> Bar
+                            </a>
+                        {% elif user.employee_profile.job_type == 'manager' %}
+                            <a href="{% url 'manager_dashboard' %}" class="text-emerald-400 font-semibold border border-emerald-400 px-3 py-1 rounded hover:bg-emerald-400 hover:text-indigo-900">
+                                <i class="fa-solid fa-briefcase"></i> Manager
+                            </a>
                         {% endif %}
                     {% endif %}
+
+                    <a href="{% url 'inbox' %}" class="text-gray-200 hover:text-white transition" title="Messages">
+                        <i class="fa-solid fa-envelope"></i>{% if unread_messages %} <span class="text-xs bg-pink-500 px-1.5 rounded-full">{{ unread_messages }}</span>{% endif %}
+                    </a>
 
                     <!-- Logout Button -->
                     <form action="{% url 'logout' %}" method="post" class="inline">

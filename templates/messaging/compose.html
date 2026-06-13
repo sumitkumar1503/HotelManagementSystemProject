@@ -1,0 +1,31 @@
+{% extends 'messaging/messagebase.html' %}
+{% block title %}Compose{% endblock %}
+{% block message_content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">New Message</h1>
+    <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+            {% if form.errors %}<div class="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{{ form.errors }}</div>{% endif %}
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">To (Receptionist, Kitchen, Bar, Manager, etc.)</label>
+                {{ form.recipient }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
+                {{ form.subject }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Message</label>
+                {{ form.body }}
+            </div>
+            <div class="pt-4 border-t flex gap-3">
+                <button type="submit" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-md transition">
+                    <i data-lucide="send" class="w-4 h-4 inline mr-1"></i> Send Message
+                </button>
+                <a href="{% url 'inbox' %}" class="flex-1 text-center py-3 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'manager_panel/managerbase.html' %}
+{% block title %}Manager Dashboard{% endblock %}
+{% block manager_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Manager Dashboard</h1>
+            <p class="text-gray-500">
+                {% if active_branch %}Viewing: <span class="font-bold text-emerald-600">{{ active_branch.name }}</span>{% else %}Viewing: <span class="font-bold">All Branches</span>{% endif %}
+            </p>
+        </div>
+        <!-- Branch switcher -->
+        <div class="flex items-center gap-2 flex-wrap">
+            <a href="{% url 'switch_branch' 0 %}" class="px-3 py-2 rounded-lg text-sm font-semibold {% if not active_branch %}bg-emerald-600 text-white{% else %}bg-white border border-gray-200 text-gray-600{% endif %}">All</a>
+            {% for b in branches %}
+            <a href="{% url 'switch_branch' b.id %}" class="px-3 py-2 rounded-lg text-sm font-semibold {% if active_branch.id == b.id %}bg-emerald-600 text-white{% else %}bg-white border border-gray-200 text-gray-600 hover:border-emerald-400{% endif %}">{{ b.name }}</a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <p class="text-gray-400 text-xs font-bold uppercase">Revenue</p>
+            <h3 class="text-2xl font-black text-gray-800">{{ site_currency }}{{ total_revenue }}</h3>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <p class="text-gray-400 text-xs font-bold uppercase">Bookings</p>
+            <h3 class="text-2xl font-black text-gray-800">{{ total_bookings }}</h3>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <p class="text-gray-400 text-xs font-bold uppercase">Occupancy</p>
+            <h3 class="text-2xl font-black text-gray-800">{{ occupancy_rate }}%</h3>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <p class="text-gray-400 text-xs font-bold uppercase">Staff</p>
+            <h3 class="text-2xl font-black text-gray-800">{{ staff_count }}</h3>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="px-8 py-5 border-b border-gray-100 bg-gray-50/50">
+            <h2 class="text-lg font-bold text-gray-800">Recent Bookings</h2>
+        </div>
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
+                <tr>
+                    <th class="px-6 py-3">Guest</th>
+                    <th class="px-6 py-3">Room</th>
+                    <th class="px-6 py-3">Status</th>
+                    <th class="px-6 py-3 text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for booking in recent_bookings %}
+                <tr class="hover:bg-emerald-50/40">
+                    <td class="px-6 py-4 font-semibold text-gray-800">{{ booking.user.get_full_name|default:booking.user.username }}</td>
+                    <td class="px-6 py-4">Room {{ booking.room.room_number }}</td>
+                    <td class="px-6 py-4 text-sm">{{ booking.status }}</td>
+                    <td class="px-6 py-4 text-right font-bold">{{ site_currency }}{{ booking.total_amount }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="p-8 text-center text-gray-500">No bookings found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,7 +1,10 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.db import transaction
-from .models import Booking, CustomUser, Customer, Employee, FoodItem, PaymentSetting, PaymentReceipt
+from .models import (
+    Booking, CustomUser, Customer, Employee, FoodItem, PaymentSetting, PaymentReceipt,
+    Branch, Drink, Message, SiteSetting,
+)
 
 
 from .models import Room
@@ -42,6 +45,8 @@ class EmployeeCreationForm(UserCreationForm):
     salary = forms.DecimalField(max_digits=10, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-input'}))
     id_card_number = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'form-input'}))
     years_of_experience = forms.IntegerField(min_value=0, widget=forms.NumberInput(attrs={'class': 'form-input'}))
+    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False,
+                                    widget=forms.Select(attrs={'class': 'form-select'}), empty_label="No Branch")
 
     class Meta(UserCreationForm.Meta):
         model = CustomUser
@@ -66,7 +71,8 @@ class EmployeeCreationForm(UserCreationForm):
                 job_type=self.cleaned_data['job_type'],
                 salary=self.cleaned_data['salary'],
                 id_card_number=self.cleaned_data['id_card_number'],
-                years_of_experience=self.cleaned_data['years_of_experience']
+                years_of_experience=self.cleaned_data['years_of_experience'],
+                branch=self.cleaned_data.get('branch'),
             )
         return user
 
@@ -76,6 +82,8 @@ class EmployeeEditForm(forms.ModelForm):
     salary = forms.DecimalField(max_digits=10, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-input'}))
     id_card_number = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'form-input'}))
     years_of_experience = forms.IntegerField(min_value=0, widget=forms.NumberInput(attrs={'class': 'form-input'}))
+    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False,
+                                    widget=forms.Select(attrs={'class': 'form-select'}), empty_label="No Branch")
 
     class Meta:
         model = CustomUser
@@ -97,6 +105,7 @@ class EmployeeEditForm(forms.ModelForm):
             self.fields['salary'].initial = profile.salary
             self.fields['id_card_number'].initial = profile.id_card_number
             self.fields['years_of_experience'].initial = profile.years_of_experience
+            self.fields['branch'].initial = profile.branch
 
     def save(self, commit=True):
         # 1. Save User fields
@@ -109,6 +118,7 @@ class EmployeeEditForm(forms.ModelForm):
             profile.salary = self.cleaned_data['salary']
             profile.id_card_number = self.cleaned_data['id_card_number']
             profile.years_of_experience = self.cleaned_data['years_of_experience']
+            profile.branch = self.cleaned_data.get('branch')
             profile.save()
         return user
 
@@ -233,4 +243,77 @@ class PaymentReceiptForm(forms.ModelForm):
             'receipt_file': forms.FileInput(attrs={'class': 'form-input'}),
             'amount': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01', 'placeholder': '0.00'}),
             'note': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Transaction ID / reference (optional)'}),
+        }
+
+
+class DrinkForm(forms.ModelForm):
+    class Meta:
+        model = Drink
+        fields = ['name', 'category', 'price', 'image', 'stock_quantity', 'is_available', 'branch']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'image': forms.FileInput(attrs={'class': 'form-input'}),
+            'stock_quantity': forms.NumberInput(attrs={'class': 'form-input'}),
+            'is_available': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'branch': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+
+class RestockForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1, widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': 'Qty to add'}))
+    note = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Supplier / note (optional)'}))
+
+
+class BranchForm(forms.ModelForm):
+    class Meta:
+        model = Branch
+        fields = ['name', 'code', 'address', 'city', 'phone', 'email', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input'}),
+            'code': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. NYC01'}),
+            'address': forms.Textarea(attrs={'class': 'form-input', 'rows': 2}),
+            'city': forms.TextInput(attrs={'class': 'form-input'}),
+            'phone': forms.TextInput(attrs={'class': 'form-input'}),
+            'email': forms.EmailInput(attrs={'class': 'form-input'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+        }
+
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['recipient', 'subject', 'body']
+        widgets = {
+            'recipient': forms.Select(attrs={'class': 'form-select'}),
+            'subject': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Subject (e.g. Fresh towels request)'}),
+            'body': forms.Textarea(attrs={'class': 'form-input', 'rows': 5, 'placeholder': 'Type your message...'}),
+        }
+
+    def __init__(self, *args, sender=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        qs = CustomUser.objects.exclude(is_active=False).order_by('role', 'username')
+        if sender is not None:
+            qs = qs.exclude(id=sender.id)
+        self.fields['recipient'].queryset = qs
+        self.fields['recipient'].label_from_instance = self._label
+
+    @staticmethod
+    def _label(user):
+        name = user.get_full_name() or user.username
+        if user.role == 'employee' and hasattr(user, 'employee_profile'):
+            return f"{name} ({user.employee_profile.get_job_type_display()})"
+        return f"{name} ({user.get_role_display()})"
+
+
+class SiteSettingForm(forms.ModelForm):
+    class Meta:
+        model = SiteSetting
+        fields = ['hotel_name', 'currency_symbol', 'currency_code', 'vat_percentage']
+        widgets = {
+            'hotel_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'currency_symbol': forms.TextInput(attrs={'class': 'form-input', 'placeholder': '$, €, ₹, £...'}),
+            'currency_code': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'USD, EUR, INR...'}),
+            'vat_percentage': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
         }

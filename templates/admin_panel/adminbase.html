@@ -178,10 +178,41 @@
     <span>Guests</span>
 </a>
 
+<!-- Bar Inventory -->
+<a href="{% url 'bar_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'drink' in request.resolver_match.url_name or request.resolver_match.url_name == 'bar_inventory' %}active{% endif %}">
+    <i data-lucide="wine" class="w-5 h-5 mr-4"></i>
+    <span>Bar Inventory</span>
+</a>
+
+<!-- Sales Record -->
+<a href="{% url 'sales_record' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'sales_record' %}active{% endif %}">
+    <i data-lucide="receipt-text" class="w-5 h-5 mr-4"></i>
+    <span>Sales Record</span>
+</a>
+
+<!-- Branches -->
+<a href="{% url 'manage_branches' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'branch' in request.resolver_match.url_name %}active{% endif %}">
+    <i data-lucide="git-branch" class="w-5 h-5 mr-4"></i>
+    <span>Branches</span>
+</a>
+
+<!-- Messages -->
+<a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+    <i data-lucide="mail" class="w-5 h-5 mr-4"></i>
+    <span>Messages</span>
+    {% if unread_messages %}<span class="ml-auto bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
+</a>
+
 <!-- Payment / Bank Settings -->
 <a href="{% url 'payment_settings' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'payment_settings' %}active{% endif %}">
     <i data-lucide="landmark" class="w-5 h-5 mr-4"></i>
     <span>Payment Settings</span>
+</a>
+
+<!-- Currency & VAT -->
+<a href="{% url 'site_settings' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'site_settings' %}active{% endif %}">
+    <i data-lucide="badge-dollar-sign" class="w-5 h-5 mr-4"></i>
+    <span>Currency &amp; VAT</span>
 </a>
 
       <!-- Home Page Link -->
@@ -248,6 +279,7 @@
 
       <!-- Page Content Injection -->
       {% block admin_content %}{% endblock %}
+      {% block panel_content %}{% endblock %}
     </main>
   </div>
 </div>

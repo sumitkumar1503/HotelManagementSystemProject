@@ -1,0 +1,87 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Bar{% endblock %} - {{ site_hotel_name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+ <style>
+  body { font-family: 'Inter', sans-serif; background-color: #fdf2f8; }
+  .sidebar { background: linear-gradient(to bottom, #4a044e, #701a75, #a21caf); color: white; }
+  .sidebar-link:hover { background-color: rgba(255,255,255,0.1); transform: translateX(4px); }
+  .sidebar-link.active { background: linear-gradient(to right, #e879f9, #c026d3); color: white; font-weight: 700; }
+  .form-input, .form-select { width: 100%; padding: 10px 15px; border: 1px solid #e5e7eb; border-radius: 8px; outline: none; color: #374151; }
+  .form-input:focus, .form-select:focus { border-color: #c026d3; box-shadow: 0 0 0 3px rgba(192,38,211,0.1); }
+ </style>
+</head>
+<body class="flex min-h-screen">
+  <aside class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl transition-transform duration-300 flex flex-col">
+    <div class="flex items-center justify-center p-6 border-b border-white/20">
+      <i data-lucide="wine" class="w-8 h-8 mr-3 text-pink-300"></i>
+      <h1 class="text-xl font-bold">Bar Station</h1>
+    </div>
+
+    <nav class="p-4 space-y-2 flex-1">
+      <a href="{% url 'bar_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'bar_dashboard' %}active{% endif %}">
+        <i data-lucide="glass-water" class="w-5 h-5 mr-3"></i> Active Orders
+      </a>
+      <a href="{% url 'bar_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'bar_inventory' %}active{% endif %}">
+        <i data-lucide="package" class="w-5 h-5 mr-3"></i> Inventory
+      </a>
+      <a href="{% url 'sales_record' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'sales_record' %}active{% endif %}">
+        <i data-lucide="receipt-text" class="w-5 h-5 mr-3"></i> Sales Record
+      </a>
+      <a href="{% url 'bar_history' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'bar_history' %}active{% endif %}">
+        <i data-lucide="history" class="w-5 h-5 mr-3"></i> History
+      </a>
+      <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+        <i data-lucide="mail" class="w-5 h-5 mr-3"></i> Messages
+        {% if unread_messages %}<span class="ml-auto bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
+      </a>
+      <a href="{% url 'bar_profile' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'bar_profile' %}active{% endif %}">
+        <i data-lucide="user-circle" class="w-5 h-5 mr-3"></i> My Profile
+      </a>
+    </nav>
+
+    <div class="bg-black/10 border-t border-white/20">
+       <div class="p-4 flex items-center gap-3">
+           {% if user.profile_picture %}
+               <img src="{{ user.profile_picture.url }}" class="w-10 h-10 rounded-full border-2 border-pink-300 object-cover">
+           {% else %}
+               <div class="w-10 h-10 bg-pink-200 text-pink-800 rounded-full flex items-center justify-center font-bold">{{ user.username|first|upper }}</div>
+           {% endif %}
+           <div class="flex-1 min-w-0">
+               <p class="text-sm font-bold truncate">{{ user.get_full_name|default:user.username }}</p>
+               <p class="text-xs text-pink-200">Bar Staff</p>
+           </div>
+       </div>
+       <div class="px-4 pb-4">
+           <form action="{% url 'logout' %}" method="post">
+               {% csrf_token %}
+               <button class="flex items-center justify-center w-full py-2 text-sm bg-black/20 hover:bg-black/40 rounded text-pink-100 transition">
+                   <i data-lucide="log-out" class="w-4 h-4 mr-2"></i> Logout
+               </button>
+           </form>
+       </div>
+    </div>
+  </aside>
+
+  <main class="flex-1 ml-64 p-8">
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-pink-100 text-pink-800 border border-pink-200{% endif %} flex items-center gap-2">
+                <i data-lucide="info" class="w-5 h-5"></i> {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% block bar_content %}{% endblock %}
+    {% block panel_content %}{% endblock %}
+  </main>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

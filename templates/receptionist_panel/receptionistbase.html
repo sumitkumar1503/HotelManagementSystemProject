@@ -48,6 +48,10 @@
       <a href="{% url 'receptionist_guest_list' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'receptionist_guest_list' %}active{% endif %}">
         <i data-lucide="users" class="w-5 h-5 mr-3"></i> Guest List
       </a>
+      <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+        <i data-lucide="mail" class="w-5 h-5 mr-3"></i> Messages
+        {% if unread_messages %}<span class="ml-auto bg-purple-400 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
+      </a>
     </nav>
 
     <!-- User Profile Snippet -->

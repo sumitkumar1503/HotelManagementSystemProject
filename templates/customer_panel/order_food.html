@@ -35,9 +35,9 @@
                     <div class="p-5">
                         <div class="flex justify-between items-start">
                             <h3 class="font-bold text-gray-800">{{ item.name }}</h3>
-                            <span class="font-bold text-indigo-600">${{ item.price }}</span>
+                            <span class="font-bold text-indigo-600">{{ site_currency }}{{ item.price }}</span>
                         </div>
-                        <p class="text-xs text-gray-500 uppercase mt-1 tracking-wider">{{ item.get_category_display }}</p>
+                        <p class="text-xs text-gray-500 uppercase mt-1 tracking-wider">{{ item.get_category_display }}{% if site_vat %} · +{{ site_vat }}% VAT{% endif %}</p>
                     </div>
                 </label>
             </div>
@@ -53,7 +53,7 @@
             <div class="max-w-6xl mx-auto flex justify-between items-center">
                 <div class="flex flex-col">
                     <span class="text-gray-500 text-sm">Total Amount</span>
-                    <span class="text-2xl font-bold text-indigo-600" id="totalPrice">$0.00</span>
+                    <span class="text-2xl font-bold text-indigo-600" id="totalPrice">{{ site_currency }}0.00</span>
                 </div>
                 <div class="flex items-center gap-4">
                     <span class="text-gray-400 text-sm hidden sm:inline" id="itemCount">0 items selected</span>
@@ -84,7 +84,7 @@
             });
             
             // Update UI
-            priceDisplay.textContent = '$' + total.toFixed(2);
+            priceDisplay.textContent = "{{ site_currency }}" + total.toFixed(2);
             countDisplay.textContent = count + ' items selected';
             
             if(count > 0) {

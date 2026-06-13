@@ -1,0 +1,69 @@
+{% extends 'bar_panel/barbase.html' %}
+{% block title %}Bar Orders{% endblock %}
+{% block bar_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-8">
+        <h2 class="text-3xl font-bold text-gray-800 flex items-center">
+            <i data-lucide="glass-water" class="w-8 h-8 text-fuchsia-500 mr-3"></i> Live Bar Orders
+        </h2>
+    </div>
+
+    {% if low_stock %}
+    <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500 mt-0.5"></i>
+        <div>
+            <p class="font-bold text-amber-800">Low stock alert</p>
+            <p class="text-sm text-amber-700">
+                {% for d in low_stock %}{{ d.name }} ({{ d.stock_quantity }}){% if not forloop.last %}, {% endif %}{% endfor %}
+                — <a href="{% url 'bar_inventory' %}" class="underline font-semibold">restock now</a>.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for order in orders %}
+        <div class="bg-white rounded-xl shadow-lg border-t-8
+            {% if order.status == 'pending' %}border-red-500{% elif order.status == 'preparing' %}border-yellow-500{% else %}border-green-500{% endif %}">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <span class="text-xs font-bold text-gray-400 uppercase">Bar Service</span>
+                        <h3 class="text-2xl font-bold text-gray-800">Room {{ order.booking.room.room_number }}</h3>
+                    </div>
+                    <span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{{ order.created_at|time:"H:i" }}</span>
+                </div>
+                <div class="border-t border-b border-dashed border-gray-200 py-4 my-4 space-y-2">
+                    {% for item in order.items.all %}
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-700 font-medium">{{ item.quantity }}x {{ item.drink.name }}</span>
+                        <span class="text-gray-500">{{ site_currency }}{{ item.subtotal }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-sm text-gray-500">Total</span>
+                    <span class="font-bold text-fuchsia-600">{{ site_currency }}{{ order.total_price }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="px-3 py-1 rounded-full text-xs font-bold uppercase
+                        {% if order.status == 'pending' %}bg-red-100 text-red-700{% elif order.status == 'preparing' %}bg-yellow-100 text-yellow-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ order.get_status_display }}
+                    </span>
+                    {% if order.status == 'pending' %}
+                        <a href="{% url 'update_bar_order_status' order.id 'preparing' %}" class="px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-bold text-sm transition">Start Preparing</a>
+                    {% elif order.status == 'preparing' %}
+                        <a href="{% url 'update_bar_order_status' order.id 'served' %}" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm transition">Mark Served</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-3 text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+            <i data-lucide="martini" class="w-16 h-16 mx-auto text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">No active bar orders.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

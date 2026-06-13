@@ -5,8 +5,16 @@ from django.contrib.auth import login
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password 
-from accounts.models import Booking, CleaningLog, CustomUser, Customer, Employee, FoodItem, FoodOrder, Room, PaymentSetting, PaymentReceipt
-from .forms import BookingForm, CustomerEditForm, CustomerSignUpForm, EmployeeCreationForm, EmployeeEditForm, FoodItemForm, RoomForm, WalkInBookingForm, PaymentSettingForm, PaymentReceiptForm
+from accounts.models import (
+    Booking, CleaningLog, CustomUser, Customer, Employee, FoodItem, FoodOrder, Room,
+    PaymentSetting, PaymentReceipt, Branch, Wallet, WalletTransaction,
+    Drink, BarOrder, BarOrderItem, StockTransaction, Message, SiteSetting,
+)
+from .forms import (
+    BookingForm, CustomerEditForm, CustomerSignUpForm, EmployeeCreationForm, EmployeeEditForm,
+    FoodItemForm, RoomForm, WalkInBookingForm, PaymentSettingForm, PaymentReceiptForm,
+    DrinkForm, RestockForm, BranchForm, MessageForm, SiteSettingForm,
+)
 from django.contrib import messages
 from django.db.models.functions import TruncMonth, TruncDay 
 from .decorators import admin_required, customer_required, employee_required
@@ -105,6 +113,10 @@ def login_view(request):
                         return redirect('kitchen_dashboard')
                     elif job == 'housekeeping':
                         return redirect('housekeeping_dashboard')
+                    elif job == 'bar':
+                        return redirect('bar_dashboard')
+                    elif job == 'manager':
+                        return redirect('manager_dashboard')
                     else:
                         return redirect('home')
                 except:
@@ -808,15 +820,28 @@ def generate_invoice(request, booking_id):
     room_total = duration * booking.room.price_per_night
     food_orders = booking.foodorder_set.all()
     food_total = food_orders.aggregate(Sum('total_price'))['total_price__sum'] or 0
-    grand_total = room_total + food_total
-    
+    bar_orders = booking.bar_orders.all()
+    bar_total = bar_orders.aggregate(Sum('total_price'))['total_price__sum'] or 0
+    subtotal = room_total + food_total + bar_total
+
+    # Apply VAT from site settings
+    site = SiteSetting.load()
+    vat_rate = site.vat_percentage or 0
+    vat_amount = (subtotal * vat_rate) / 100
+    grand_total = subtotal + vat_amount
+
     context = {
         'booking': booking,
         'duration': duration,
         'room_total': room_total,
         'food_orders': food_orders,
         'food_total': food_total,
-        'grand_total': grand_total
+        'bar_orders': bar_orders,
+        'bar_total': bar_total,
+        'subtotal': subtotal,
+        'vat_rate': vat_rate,
+        'vat_amount': vat_amount,
+        'grand_total': grand_total,
     }
 
     # CHECK FOR DOWNLOAD MODE
@@ -997,3 +1022,462 @@ def reject_payment(request, receipt_id):
 
     messages.error(request, f"Receipt for Booking #{receipt.booking.id} marked as rejected.")
     return redirect('pending_payments')
+
+
+# ===========================================================================
+# HELPERS
+# ===========================================================================
+def _get_wallet(user):
+    wallet, _ = Wallet.objects.get_or_create(user=user)
+    return wallet
+
+
+def _active_booking_for(user):
+    return Booking.objects.filter(
+        user=user,
+        actual_check_in__isnull=False,
+        actual_check_out__isnull=True,
+        is_cancelled=False,
+    ).first()
+
+
+def _panel_base(request):
+    """Return the correct base template for shared pages, based on the user's role."""
+    if request.user.role == 'admin':
+        return 'admin_panel/adminbase.html'
+    if request.user.role == 'employee' and hasattr(request.user, 'employee_profile'):
+        job = request.user.employee_profile.job_type
+        return {
+            'kitchen': 'kitchen_panel/kitchenbase.html',
+            'bar': 'bar_panel/barbase.html',
+            'manager': 'manager_panel/managerbase.html',
+            'receptionist': 'receptionist_panel/receptionistbase.html',
+            'housekeeping': 'housekeeping_panel/housekeepingbase.html',
+        }.get(job, 'admin_panel/adminbase.html')
+    return 'admin_panel/adminbase.html'
+
+
+# ===========================================================================
+# HOTEL CREDIT WALLET + BOOKING CANCELLATION
+# ===========================================================================
+@login_required
+@customer_required
+def customer_wallet(request):
+    wallet = _get_wallet(request.user)
+    transactions = wallet.transactions.all()
+    return render(request, 'customer_panel/wallet.html', {'wallet': wallet, 'transactions': transactions})
+
+
+@login_required
+@customer_required
+def cancel_booking(request, booking_id):
+    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
+
+    if booking.is_cancelled:
+        messages.error(request, "This booking is already cancelled.")
+        return redirect('customer_bookings')
+
+    if booking.actual_check_in:
+        messages.error(request, "You cannot cancel after you have checked in.")
+        return redirect('customer_bookings')
+
+    # Determine refund amount
+    refund = booking.total_amount or 0
+    if not refund:
+        confirmed = booking.receipts.filter(status=PaymentReceipt.STATUS_CONFIRMED).aggregate(Sum('amount'))['amount__sum']
+        refund = confirmed or 0
+
+    if booking.is_paid and refund > 0:
+        wallet = _get_wallet(request.user)
+        wallet.credit(refund, reason=f"Refund for cancelled Booking #{booking.id}")
+        messages.success(request, f"Booking cancelled. {refund} has been refunded to your hotel credit wallet.")
+    else:
+        messages.success(request, "Booking cancelled successfully.")
+
+    # Free the room
+    room = booking.room
+    if room.room_status in ['occupied', 'reserved']:
+        room.room_status = 'available'
+        room.save()
+
+    booking.is_cancelled = True
+    booking.cancelled_at = timezone.now()
+    booking.save()
+
+    return redirect('customer_bookings')
+
+
+# ===========================================================================
+# ADMIN: SITE SETTINGS (Currency + VAT)
+# ===========================================================================
+@login_required
+@admin_required
+def site_settings(request):
+    settings_obj = SiteSetting.load()
+    if request.method == 'POST':
+        form = SiteSettingForm(request.POST, instance=settings_obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Site settings (currency / VAT) updated successfully!")
+            return redirect('site_settings')
+    else:
+        form = SiteSettingForm(instance=settings_obj)
+    return render(request, 'admin_panel/site_settings.html', {'form': form, 'settings': settings_obj})
+
+
+# ===========================================================================
+# BAR SECTION - CUSTOMER ORDERING
+# ===========================================================================
+@login_required
+@customer_required
+def order_drinks(request):
+    active_booking = _active_booking_for(request.user)
+    if not active_booking:
+        messages.error(request, "You must be checked into a room to order from the bar.")
+        return redirect('customer_dashboard')
+
+    drinks = Drink.objects.filter(is_available=True, stock_quantity__gt=0)
+
+    if request.method == 'POST':
+        order = BarOrder.objects.create(booking=active_booking)
+        total = 0
+        any_item = False
+        for drink in drinks:
+            qty = int(request.POST.get(f'qty_{drink.id}', 0) or 0)
+            if qty > 0:
+                qty = min(qty, drink.stock_quantity)  # never oversell
+                BarOrderItem.objects.create(order=order, drink=drink, quantity=qty, price=drink.price)
+                drink.stock_quantity -= qty
+                drink.save()
+                StockTransaction.objects.create(drink=drink, quantity=-qty, note=f"Bar Order #{order.id}")
+                total += qty * drink.price
+                any_item = True
+
+        if not any_item:
+            order.delete()
+            messages.error(request, "Please select at least one drink.")
+            return redirect('order_drinks')
+
+        order.total_price = total
+        order.save()
+        messages.success(request, "Drink order placed! The bar is preparing your order.")
+        return redirect('customer_bar_history')
+
+    return render(request, 'customer_panel/order_drinks.html', {'drinks': drinks, 'room': active_booking.room})
+
+
+@login_required
+@customer_required
+def customer_bar_history(request):
+    orders = BarOrder.objects.filter(booking__user=request.user).prefetch_related('items__drink')
+    return render(request, 'customer_panel/bar_history.html', {'orders': orders})
+
+
+# ===========================================================================
+# BAR SECTION - STAFF (Orders + Inventory)
+# ===========================================================================
+@login_required
+@employee_required(allowed_jobs=['bar'])
+def bar_dashboard(request):
+    active_orders = BarOrder.objects.exclude(status='served').prefetch_related('items__drink')
+    low_stock = Drink.objects.filter(stock_quantity__lte=5).order_by('stock_quantity')[:5]
+    return render(request, 'bar_panel/dashboard.html', {'orders': active_orders, 'low_stock': low_stock})
+
+
+@login_required
+@employee_required(allowed_jobs=['bar'])
+def update_bar_order_status(request, order_id, status):
+    order = get_object_or_404(BarOrder, id=order_id)
+    order.status = status
+    if status == 'served' and request.user.role == 'employee' and hasattr(request.user, 'employee_profile'):
+        order.bar_staff = request.user.employee_profile
+    order.save()
+    return redirect('bar_dashboard')
+
+
+@login_required
+@employee_required(allowed_jobs=['bar'])
+def bar_history(request):
+    orders = BarOrder.objects.filter(status='served').prefetch_related('items__drink')
+    return render(request, 'bar_panel/history.html', {'orders': orders})
+
+
+@login_required
+@employee_required(allowed_jobs=['bar', 'manager'])
+def bar_inventory(request):
+    drinks = Drink.objects.all().order_by('name')
+    return render(request, 'bar_panel/inventory.html', {'drinks': drinks})
+
+
+@login_required
+@employee_required(allowed_jobs=['bar', 'manager'])
+def add_drink(request):
+    if request.method == 'POST':
+        form = DrinkForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "New drink added to the bar menu!")
+            return redirect('bar_inventory')
+    else:
+        form = DrinkForm()
+    return render(request, 'bar_panel/drink_form.html', {'form': form, 'title': 'Add Drink'})
+
+
+@login_required
+@employee_required(allowed_jobs=['bar', 'manager'])
+def edit_drink(request, drink_id):
+    drink = get_object_or_404(Drink, id=drink_id)
+    if request.method == 'POST':
+        form = DrinkForm(request.POST, request.FILES, instance=drink)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{drink.name} updated successfully!")
+            return redirect('bar_inventory')
+    else:
+        form = DrinkForm(instance=drink)
+    return render(request, 'bar_panel/drink_form.html', {'form': form, 'title': 'Edit Drink'})
+
+
+@login_required
+@employee_required(allowed_jobs=['bar', 'manager'])
+def delete_drink(request, drink_id):
+    drink = get_object_or_404(Drink, id=drink_id)
+    name = drink.name
+    drink.delete()
+    messages.success(request, f"{name} removed from the bar menu.")
+    return redirect('bar_inventory')
+
+
+@login_required
+@employee_required(allowed_jobs=['bar', 'manager'])
+def restock_drink(request, drink_id):
+    drink = get_object_or_404(Drink, id=drink_id)
+    if request.method == 'POST':
+        form = RestockForm(request.POST)
+        if form.is_valid():
+            qty = form.cleaned_data['quantity']
+            note = form.cleaned_data['note'] or "Manual restock"
+            drink.stock_quantity += qty
+            drink.save()
+            StockTransaction.objects.create(drink=drink, quantity=qty, note=note)
+            messages.success(request, f"Restocked {qty} units of {drink.name}.")
+            return redirect('bar_inventory')
+    else:
+        form = RestockForm()
+    return render(request, 'bar_panel/restock.html', {'form': form, 'drink': drink})
+
+
+@login_required
+@employee_required(allowed_jobs=['bar'])
+def bar_profile(request):
+    employee_profile = request.user.employee_profile
+    if request.method == 'POST':
+        form = EmployeeEditForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully!")
+            return redirect('bar_profile')
+    else:
+        form = EmployeeEditForm(instance=request.user)
+    return render(request, 'bar_panel/profile.html', {'form': form, 'employee': employee_profile})
+
+
+# ===========================================================================
+# SALES RECORD (Food + Bar) - mark as paid
+# ===========================================================================
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'bar', 'manager'])
+def sales_record(request):
+    food_orders = FoodOrder.objects.select_related('booking__room', 'booking__user').order_by('-created_at')
+    bar_orders = BarOrder.objects.select_related('booking__room', 'booking__user').prefetch_related('items__drink').order_by('-created_at')
+
+    food_total = food_orders.filter(is_paid=True).aggregate(Sum('total_price'))['total_price__sum'] or 0
+    bar_total = bar_orders.filter(is_paid=True).aggregate(Sum('total_price'))['total_price__sum'] or 0
+    pending_count = food_orders.filter(is_paid=False).count() + bar_orders.filter(is_paid=False).count()
+
+    return render(request, 'kitchen_panel/sales_record.html', {
+        'food_orders': food_orders,
+        'bar_orders': bar_orders,
+        'food_total': food_total,
+        'bar_total': bar_total,
+        'grand_total': food_total + bar_total,
+        'pending_count': pending_count,
+        'base_template': _panel_base(request),
+    })
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'bar', 'manager'])
+def mark_food_paid(request, order_id):
+    order = get_object_or_404(FoodOrder, id=order_id)
+    order.is_paid = True
+    order.save()
+    messages.success(request, f"Food Order #{order.id} marked as paid.")
+    return redirect('sales_record')
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'bar', 'manager'])
+def mark_bar_paid(request, order_id):
+    order = get_object_or_404(BarOrder, id=order_id)
+    order.is_paid = True
+    order.save()
+    messages.success(request, f"Bar Order #{order.id} marked as paid.")
+    return redirect('sales_record')
+
+
+# ===========================================================================
+# IN-APP MESSAGING
+# ===========================================================================
+@login_required
+def inbox(request):
+    received = Message.objects.filter(recipient=request.user).select_related('sender')
+    return render(request, 'messaging/inbox.html', {'messages_list': received})
+
+
+@login_required
+def sent_messages(request):
+    sent = Message.objects.filter(sender=request.user).select_related('recipient')
+    return render(request, 'messaging/sent.html', {'messages_list': sent})
+
+
+@login_required
+def compose_message(request):
+    initial = {}
+    to_id = request.GET.get('to')
+    if to_id:
+        initial['recipient'] = to_id
+
+    if request.method == 'POST':
+        form = MessageForm(request.POST, sender=request.user)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.sender = request.user
+            msg.save()
+            messages.success(request, "Message sent successfully!")
+            return redirect('sent_messages')
+    else:
+        form = MessageForm(sender=request.user, initial=initial)
+    return render(request, 'messaging/compose.html', {'form': form})
+
+
+@login_required
+def view_message(request, message_id):
+    msg = get_object_or_404(Message, id=message_id)
+    if request.user not in [msg.sender, msg.recipient]:
+        return redirect('inbox')
+    if msg.recipient == request.user and not msg.is_read:
+        msg.is_read = True
+        msg.save()
+    return render(request, 'messaging/view_message.html', {'msg': msg})
+
+
+@login_required
+def delete_message(request, message_id):
+    msg = get_object_or_404(Message, id=message_id)
+    if request.user in [msg.sender, msg.recipient]:
+        msg.delete()
+        messages.success(request, "Message deleted.")
+    return redirect('inbox')
+
+
+# ===========================================================================
+# MULTI-BRANCH MANAGEMENT (Admin + Manager)
+# ===========================================================================
+@login_required
+@employee_required(allowed_jobs=['manager'])
+def manage_branches(request):
+    branches = Branch.objects.all()
+    return render(request, 'admin_panel/branches.html', {'branches': branches, 'base_template': _panel_base(request)})
+
+
+@login_required
+@employee_required(allowed_jobs=['manager'])
+def add_branch(request):
+    if request.method == 'POST':
+        form = BranchForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Branch created successfully!")
+            return redirect('manage_branches')
+    else:
+        form = BranchForm()
+    return render(request, 'admin_panel/branch_form.html', {'form': form, 'title': 'Add Branch', 'base_template': _panel_base(request)})
+
+
+@login_required
+@employee_required(allowed_jobs=['manager'])
+def edit_branch(request, branch_id):
+    branch = get_object_or_404(Branch, id=branch_id)
+    if request.method == 'POST':
+        form = BranchForm(request.POST, instance=branch)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Branch {branch.name} updated.")
+            return redirect('manage_branches')
+    else:
+        form = BranchForm(instance=branch)
+    return render(request, 'admin_panel/branch_form.html', {'form': form, 'title': 'Edit Branch', 'base_template': _panel_base(request)})
+
+
+@login_required
+@employee_required(allowed_jobs=['manager'])
+def delete_branch(request, branch_id):
+    branch = get_object_or_404(Branch, id=branch_id)
+    name = branch.name
+    branch.delete()
+    messages.success(request, f"Branch {name} deleted.")
+    return redirect('manage_branches')
+
+
+@login_required
+def switch_branch(request, branch_id):
+    # Only admin/manager can switch the active branch context.
+    is_manager = request.user.role == 'admin' or (
+        request.user.role == 'employee' and hasattr(request.user, 'employee_profile')
+        and request.user.employee_profile.job_type == 'manager'
+    )
+    if not is_manager:
+        return redirect('home')
+
+    if branch_id == 0:
+        request.session.pop('active_branch_id', None)
+        messages.info(request, "Viewing all branches.")
+    else:
+        branch = get_object_or_404(Branch, id=branch_id)
+        request.session['active_branch_id'] = branch.id
+        messages.info(request, f"Switched to branch: {branch.name}")
+
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+
+@login_required
+@employee_required(allowed_jobs=['manager'])
+def manager_dashboard(request):
+    active_branch_id = request.session.get('active_branch_id')
+
+    bookings = Booking.objects.filter(is_cancelled=False)
+    rooms = Room.objects.all()
+    staff = Employee.objects.all()
+
+    if active_branch_id:
+        bookings = bookings.filter(branch_id=active_branch_id)
+        rooms = rooms.filter(branch_id=active_branch_id)
+        staff = staff.filter(branch_id=active_branch_id)
+
+    total_revenue = bookings.filter(is_paid=True).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    total_bookings = bookings.count()
+    total_rooms = rooms.count()
+    occupied = rooms.filter(room_status='occupied').count()
+    occupancy = int((occupied / total_rooms) * 100) if total_rooms else 0
+
+    context = {
+        'total_revenue': total_revenue,
+        'total_bookings': total_bookings,
+        'total_rooms': total_rooms,
+        'occupancy_rate': occupancy,
+        'staff_count': staff.count(),
+        'recent_bookings': bookings.select_related('user', 'room').order_by('-id')[:8],
+        'branches': Branch.objects.filter(is_active=True),
+    }
+    return render(request, 'manager_panel/dashboard.html', context)

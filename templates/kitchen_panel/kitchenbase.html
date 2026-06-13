@@ -29,6 +29,17 @@
         <i data-lucide="utensils" class="w-5 h-5 mr-3"></i> Active Orders
       </a>
       
+      <!-- Sales Record -->
+      <a href="{% url 'sales_record' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'sales_record' %}active{% endif %}">
+        <i data-lucide="receipt-text" class="w-5 h-5 mr-3"></i> Sales Record
+      </a>
+
+      <!-- Messages -->
+      <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+        <i data-lucide="mail" class="w-5 h-5 mr-3"></i> Messages
+        {% if unread_messages %}<span class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
+      </a>
+
       <!-- History Link -->
       <a href="{% url 'kitchen_history' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'kitchen_history' %}active{% endif %}">
         <i data-lucide="history" class="w-5 h-5 mr-3"></i> History
@@ -87,6 +98,7 @@
     {% endif %}
 
     {% block kitchen_content %}{% endblock %}
+    {% block panel_content %}{% endblock %}
   </main>
   <script>lucide.createIcons();</script>
 </body>

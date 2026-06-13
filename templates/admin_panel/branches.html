@@ -1,0 +1,53 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Branches{% endblock %}
+{% block panel_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Branch & Location Management</h1>
+            <p class="text-gray-500">Create and manage multiple hotel branches and locations.</p>
+        </div>
+        <a href="{% url 'add_branch' %}" class="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow transition flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Branch
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for branch in branches %}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+                        <i data-lucide="building-2" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800">{{ branch.name }}</h3>
+                        <p class="text-xs text-gray-400">{{ branch.code }}</p>
+                    </div>
+                </div>
+                {% if branch.is_active %}
+                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Active</span>
+                {% else %}
+                    <span class="px-2 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded">Inactive</span>
+                {% endif %}
+            </div>
+            <div class="text-sm text-gray-500 space-y-1 mb-4">
+                <p><i data-lucide="map-pin" class="w-3.5 h-3.5 inline mr-1"></i>{{ branch.city|default:"—" }}</p>
+                <p><i data-lucide="phone" class="w-3.5 h-3.5 inline mr-1"></i>{{ branch.phone|default:"—" }}</p>
+                <p class="text-xs text-gray-400">{{ branch.rooms.count }} rooms · {{ branch.staff.count }} staff</p>
+            </div>
+            <div class="flex items-center gap-2 pt-3 border-t">
+                <a href="{% url 'switch_branch' branch.id %}" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-bold rounded hover:bg-emerald-100">Manage</a>
+                <a href="{% url 'edit_branch' branch.id %}" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</a>
+                <a href="{% url 'delete_branch' branch.id %}" onclick="return confirm('Delete {{ branch.name }}?');" class="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100">Delete</a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-3 bg-white rounded-2xl border border-dashed border-gray-300 p-10 text-center text-gray-500">
+            <i data-lucide="git-branch" class="w-10 h-10 mx-auto text-gray-300 mb-2"></i>
+            <p>No branches yet. Create your first branch.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

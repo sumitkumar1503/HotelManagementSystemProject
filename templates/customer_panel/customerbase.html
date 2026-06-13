@@ -78,6 +78,27 @@
         <span>Food Orders</span>
       </a>
 
+      <a href="{% url 'order_drinks' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'order_drinks' %}active{% endif %}">
+        <i data-lucide="wine" class="w-5 h-5 mr-4"></i>
+        <span>Order Drinks</span>
+      </a>
+
+      <a href="{% url 'customer_bar_history' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_bar_history' %}active{% endif %}">
+        <i data-lucide="glass-water" class="w-5 h-5 mr-4"></i>
+        <span>Bar Orders</span>
+      </a>
+
+      <a href="{% url 'customer_wallet' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_wallet' %}active{% endif %}">
+        <i data-lucide="wallet" class="w-5 h-5 mr-4"></i>
+        <span>Credit Wallet</span>
+      </a>
+
+      <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+        <i data-lucide="mail" class="w-5 h-5 mr-4"></i>
+        <span>Messages</span>
+        {% if unread_messages %}<span class="ml-auto bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
+      </a>
+
       <!-- LINKED: Profile Settings -->
       <a href="{% url 'customer_profile' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_profile' %}active{% endif %}">
         <i data-lucide="user-cog" class="w-5 h-5 mr-4"></i>

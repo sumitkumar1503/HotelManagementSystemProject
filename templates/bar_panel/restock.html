@@ -1,0 +1,26 @@
+{% extends 'bar_panel/barbase.html' %}
+{% block title %}Restock{% endblock %}
+{% block bar_content %}
+<div class="max-w-md mx-auto">
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">Restock</h2>
+    <p class="text-gray-500 mb-6">{{ drink.name }} — current stock: <span class="font-bold">{{ drink.stock_quantity }}</span></p>
+    <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+            {% if form.errors %}<div class="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{{ form.errors }}</div>{% endif %}
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Quantity to Add</label>
+                {{ form.quantity }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Note</label>
+                {{ form.note }}
+            </div>
+            <div class="pt-4 border-t flex gap-3">
+                <button type="submit" class="flex-1 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-md transition">Add Stock</button>
+                <a href="{% url 'bar_inventory' %}" class="flex-1 text-center py-3 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

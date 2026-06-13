@@ -1,0 +1,40 @@
+{% extends 'bar_panel/barbase.html' %}
+{% block title %}Bar History{% endblock %}
+{% block bar_content %}
+<div class="max-w-7xl mx-auto">
+    <h2 class="text-3xl font-bold text-gray-800 mb-6">Served Orders History</h2>
+    <div class="bg-white rounded-xl shadow-lg border border-fuchsia-100 overflow-hidden">
+        <table class="w-full text-left">
+            <thead class="bg-fuchsia-50 text-fuchsia-900 text-xs uppercase font-semibold border-b border-fuchsia-100">
+                <tr>
+                    <th class="px-6 py-4">Order</th>
+                    <th class="px-6 py-4">Room</th>
+                    <th class="px-6 py-4">Items</th>
+                    <th class="px-6 py-4">Total</th>
+                    <th class="px-6 py-4">Paid</th>
+                    <th class="px-6 py-4">Date</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for order in orders %}
+                <tr class="hover:bg-fuchsia-50/40 transition align-top">
+                    <td class="px-6 py-4 font-bold text-gray-800">#{{ order.id }}</td>
+                    <td class="px-6 py-4">{{ order.booking.room.room_number }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        {% for item in order.items.all %}{{ item.quantity }}x {{ item.drink.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </td>
+                    <td class="px-6 py-4 font-semibold text-fuchsia-600">{{ site_currency }}{{ order.total_price }}</td>
+                    <td class="px-6 py-4">
+                        {% if order.is_paid %}<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Paid</span>
+                        {% else %}<span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded">Unpaid</span>{% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ order.created_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="p-10 text-center text-gray-500">No served orders yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
