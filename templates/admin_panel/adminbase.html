@@ -178,6 +178,12 @@
     <span>Guests</span>
 </a>
 
+<!-- Payment / Bank Settings -->
+<a href="{% url 'payment_settings' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'payment_settings' %}active{% endif %}">
+    <i data-lucide="landmark" class="w-5 h-5 mr-4"></i>
+    <span>Payment Settings</span>
+</a>
+
       <!-- Home Page Link -->
      
     </nav>

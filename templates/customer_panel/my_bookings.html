@@ -19,6 +19,7 @@
                         <th class="px-6 py-4">Check Out Info</th>
                         <th class="px-6 py-4">Status</th>
                         <th class="px-6 py-4 text-right">Price</th>
+                        <th class="px-6 py-4 text-right">Payment</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -114,10 +115,23 @@
                         <td class="px-6 py-4 text-right font-bold text-gray-800">
                             ${{ booking.room.price_per_night }}
                         </td>
+
+                        <!-- Payment Column -->
+                        <td class="px-6 py-4 text-right">
+                            {% if booking.is_paid %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
+                                    <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> Paid
+                                </span>
+                            {% else %}
+                                <a href="{% url 'pay_booking' booking.id %}" class="inline-flex items-center px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 shadow-sm transition">
+                                    <i data-lucide="credit-card" class="w-3 h-3 mr-1"></i> Pay Now
+                                </a>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="p-8 text-center text-gray-500">
+                        <td colspan="6" class="p-8 text-center text-gray-500">
                             <i data-lucide="ghost" class="w-10 h-10 mx-auto text-gray-300 mb-2"></i>
                             <p>No bookings found.</p>
                         </td>

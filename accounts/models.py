@@ -177,3 +177,65 @@ class FoodOrder(models.Model):
     
     def __str__(self):
         return f"Order #{self.id} - Room {self.booking.room.room_number}"
+
+
+class PaymentSetting(models.Model):
+    """
+    Singleton model holding the hotel's bank transfer details.
+    The Admin can edit these from the dashboard so guests always
+    see the latest account information when paying online.
+    """
+    bank_name = models.CharField(max_length=100, default="Global Trust Bank")
+    account_holder_name = models.CharField(max_length=100, default="Grand Hotel Pvt Ltd")
+    account_number = models.CharField(max_length=40, default="1029384756")
+    ifsc_code = models.CharField(max_length=20, blank=True, default="GTBL0001234")
+    branch = models.CharField(max_length=100, blank=True, default="Main Branch")
+    payment_link = models.URLField(blank=True, null=True, help_text="Optional online payment link.")
+    instructions = models.TextField(
+        blank=True,
+        default="Please transfer the total booking amount to the account above and upload your payment receipt."
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Payment Setting"
+        verbose_name_plural = "Payment Settings"
+
+    def __str__(self):
+        return f"Payment Details - {self.bank_name}"
+
+    def save(self, *args, **kwargs):
+        # Force a single row so there is always exactly one settings record.
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+class PaymentReceipt(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_CONFIRMED = 'confirmed'
+    STATUS_REJECTED = 'rejected'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending Confirmation'),
+        (STATUS_CONFIRMED, 'Confirmed'),
+        (STATUS_REJECTED, 'Rejected'),
+    ]
+
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='receipts')
+    receipt_file = models.FileField(upload_to='payment_receipts/')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    note = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"Receipt for Booking #{self.booking.id} ({self.get_status_display()})"

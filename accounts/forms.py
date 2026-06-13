@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.db import transaction
-from .models import Booking, CustomUser, Customer, Employee, FoodItem
+from .models import Booking, CustomUser, Customer, Employee, FoodItem, PaymentSetting, PaymentReceipt
 
 
 from .models import Room
@@ -208,3 +208,29 @@ class BookingForm(forms.ModelForm):
             if check_in >= check_out:
                 raise forms.ValidationError("Check-out date must be after check-in date.")
         return cleaned_data
+
+
+class PaymentSettingForm(forms.ModelForm):
+    class Meta:
+        model = PaymentSetting
+        fields = ['bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'branch', 'payment_link', 'instructions']
+        widgets = {
+            'bank_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'account_holder_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'account_number': forms.TextInput(attrs={'class': 'form-input'}),
+            'ifsc_code': forms.TextInput(attrs={'class': 'form-input'}),
+            'branch': forms.TextInput(attrs={'class': 'form-input'}),
+            'payment_link': forms.URLInput(attrs={'class': 'form-input', 'placeholder': 'https://...'}),
+            'instructions': forms.Textarea(attrs={'class': 'form-input', 'rows': 3}),
+        }
+
+
+class PaymentReceiptForm(forms.ModelForm):
+    class Meta:
+        model = PaymentReceipt
+        fields = ['receipt_file', 'amount', 'note']
+        widgets = {
+            'receipt_file': forms.FileInput(attrs={'class': 'form-input'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01', 'placeholder': '0.00'}),
+            'note': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Transaction ID / reference (optional)'}),
+        }

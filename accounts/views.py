@@ -5,8 +5,8 @@ from django.contrib.auth import login
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password 
-from accounts.models import Booking, CleaningLog, CustomUser, Customer, Employee, FoodItem, FoodOrder, Room
-from .forms import BookingForm, CustomerEditForm, CustomerSignUpForm, EmployeeCreationForm, EmployeeEditForm, FoodItemForm, RoomForm, WalkInBookingForm
+from accounts.models import Booking, CleaningLog, CustomUser, Customer, Employee, FoodItem, FoodOrder, Room, PaymentSetting, PaymentReceipt
+from .forms import BookingForm, CustomerEditForm, CustomerSignUpForm, EmployeeCreationForm, EmployeeEditForm, FoodItemForm, RoomForm, WalkInBookingForm, PaymentSettingForm, PaymentReceiptForm
 from django.contrib import messages
 from django.db.models.functions import TruncMonth, TruncDay 
 from .decorators import admin_required, customer_required, employee_required
@@ -848,3 +848,152 @@ def process_checkout_payment(request, booking_id):
         return redirect('receptionist_dashboard')
         
     return redirect('generate_invoice', booking_id=booking_id)
+
+
+# ---------------------------------------------------------------------------
+# ONLINE PAYMENT (Bank Transfer + Receipt Upload)
+# ---------------------------------------------------------------------------
+
+def _calculate_booking_amount(booking):
+    """Estimate the amount due for a booking (nights * nightly price)."""
+    duration = (booking.check_out - booking.check_in).days
+    if duration < 1:
+        duration = 1
+    return duration * booking.room.price_per_night
+
+
+@login_required
+@admin_required
+def payment_settings(request):
+    """Admin view to set/change the bank details shown to guests."""
+    settings_obj = PaymentSetting.load()
+
+    if request.method == 'POST':
+        form = PaymentSettingForm(request.POST, instance=settings_obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Payment / bank details updated successfully!")
+            return redirect('payment_settings')
+    else:
+        form = PaymentSettingForm(instance=settings_obj)
+
+    return render(request, 'admin_panel/payment_settings.html', {'form': form, 'settings': settings_obj})
+
+
+@login_required
+@customer_required
+def pay_booking(request, booking_id):
+    """Guest pays for a booking via bank transfer and uploads a receipt."""
+    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
+    bank = PaymentSetting.load()
+    receipts = booking.receipts.all()
+    amount_due = _calculate_booking_amount(booking)
+
+    if request.method == 'POST':
+        form = PaymentReceiptForm(request.POST, request.FILES)
+        if form.is_valid():
+            receipt = form.save(commit=False)
+            receipt.booking = booking
+            if not receipt.amount:
+                receipt.amount = amount_due
+            receipt.save()
+            messages.success(request, "Receipt uploaded! The receptionist will confirm your payment shortly.")
+            return redirect('pay_booking', booking_id=booking.id)
+    else:
+        form = PaymentReceiptForm(initial={'amount': amount_due})
+
+    return render(request, 'customer_panel/pay_booking.html', {
+        'booking': booking,
+        'bank': bank,
+        'form': form,
+        'receipts': receipts,
+        'amount_due': amount_due,
+    })
+
+
+@login_required
+@customer_required
+def edit_receipt(request, receipt_id):
+    """Guest edits a previously uploaded receipt (only while pending)."""
+    receipt = get_object_or_404(PaymentReceipt, id=receipt_id, booking__user=request.user)
+
+    if receipt.status == PaymentReceipt.STATUS_CONFIRMED:
+        messages.error(request, "This payment is already confirmed and can no longer be edited.")
+        return redirect('pay_booking', booking_id=receipt.booking.id)
+
+    if request.method == 'POST':
+        form = PaymentReceiptForm(request.POST, request.FILES, instance=receipt)
+        if form.is_valid():
+            updated = form.save(commit=False)
+            # Re-uploading resets the status so the receptionist reviews again.
+            updated.status = PaymentReceipt.STATUS_PENDING
+            updated.save()
+            messages.success(request, "Receipt updated successfully!")
+            return redirect('pay_booking', booking_id=receipt.booking.id)
+    else:
+        form = PaymentReceiptForm(instance=receipt)
+
+    return render(request, 'customer_panel/edit_receipt.html', {
+        'form': form,
+        'receipt': receipt,
+        'booking': receipt.booking,
+    })
+
+
+@login_required
+@customer_required
+def delete_receipt(request, receipt_id):
+    """Guest deletes an uploaded receipt (only while pending/rejected)."""
+    receipt = get_object_or_404(PaymentReceipt, id=receipt_id, booking__user=request.user)
+    booking_id = receipt.booking.id
+
+    if receipt.status == PaymentReceipt.STATUS_CONFIRMED:
+        messages.error(request, "This payment is already confirmed and cannot be deleted.")
+        return redirect('pay_booking', booking_id=booking_id)
+
+    receipt.delete()
+    messages.success(request, "Receipt deleted successfully.")
+    return redirect('pay_booking', booking_id=booking_id)
+
+
+@login_required
+@employee_required(allowed_jobs=['receptionist'])
+def pending_payments(request):
+    """Receptionist/Admin queue of uploaded receipts awaiting confirmation."""
+    receipts = PaymentReceipt.objects.select_related('booking__user', 'booking__room').order_by('-uploaded_at')
+    return render(request, 'receptionist_panel/pending_payments.html', {'receipts': receipts})
+
+
+@login_required
+def confirm_payment(request, receipt_id):
+    """Receptionist/Admin confirms a receipt and marks the booking paid."""
+    if request.user.role not in ['admin', 'employee']:
+        return redirect('home')
+
+    receipt = get_object_or_404(PaymentReceipt, id=receipt_id)
+    receipt.status = PaymentReceipt.STATUS_CONFIRMED
+    receipt.save()
+
+    booking = receipt.booking
+    booking.is_paid = True
+    booking.payment_method = 'Bank Transfer'
+    if not booking.total_amount or booking.total_amount == 0:
+        booking.total_amount = receipt.amount or _calculate_booking_amount(booking)
+    booking.save()
+
+    messages.success(request, f"Payment confirmed for Booking #{booking.id}. The reservation is secured.")
+    return redirect('pending_payments')
+
+
+@login_required
+def reject_payment(request, receipt_id):
+    """Receptionist/Admin rejects a receipt (e.g. wrong amount / invalid proof)."""
+    if request.user.role not in ['admin', 'employee']:
+        return redirect('home')
+
+    receipt = get_object_or_404(PaymentReceipt, id=receipt_id)
+    receipt.status = PaymentReceipt.STATUS_REJECTED
+    receipt.save()
+
+    messages.error(request, f"Receipt for Booking #{receipt.booking.id} marked as rejected.")
+    return redirect('pending_payments')

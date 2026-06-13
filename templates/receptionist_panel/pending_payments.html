@@ -1,0 +1,85 @@
+{% extends 'receptionist_panel/receptionistbase.html' %}
+{% block title %}Confirm Payments{% endblock %}
+{% block receptionist_content %}
+
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">Confirm Online Payments</h2>
+        <p class="text-gray-500 mt-1">Review guest bank-transfer receipts and confirm to secure their reservation.</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-purple-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-purple-50 text-purple-900 text-sm uppercase tracking-wider border-b border-purple-100">
+                        <th class="p-4 font-semibold">Guest</th>
+                        <th class="p-4 font-semibold">Booking</th>
+                        <th class="p-4 font-semibold">Amount</th>
+                        <th class="p-4 font-semibold">Receipt</th>
+                        <th class="p-4 font-semibold">Status</th>
+                        <th class="p-4 font-semibold text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for receipt in receipts %}
+                    <tr class="hover:bg-purple-50/50 transition align-top">
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold">
+                                    {{ receipt.booking.user.username|first|upper }}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-800">{{ receipt.booking.user.get_full_name|default:receipt.booking.user.username }}</p>
+                                    <p class="text-xs text-gray-500">{{ receipt.uploaded_at|date:"M d, H:i" }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-4">
+                            <span class="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg font-bold text-sm border border-purple-100 block w-fit mb-1">
+                                Room {{ receipt.booking.room.room_number }}
+                            </span>
+                            <span class="text-xs text-gray-400">#{{ receipt.booking.id }} &middot; {{ receipt.booking.check_in|date:"M d" }} → {{ receipt.booking.check_out|date:"M d" }}</span>
+                        </td>
+                        <td class="p-4 font-bold text-gray-800">
+                            ${{ receipt.amount }}
+                            {% if receipt.note %}<p class="text-xs text-gray-400 font-normal">{{ receipt.note }}</p>{% endif %}
+                        </td>
+                        <td class="p-4">
+                            <a href="{{ receipt.receipt_file.url }}" target="_blank" class="inline-flex items-center gap-1 text-indigo-600 font-medium hover:underline">
+                                <i data-lucide="file-text" class="w-4 h-4"></i> View
+                            </a>
+                        </td>
+                        <td class="p-4">
+                            {% if receipt.status == 'confirmed' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Confirmed</span>
+                            {% elif receipt.status == 'rejected' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Rejected</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 animate-pulse">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 text-right">
+                            {% if receipt.status == 'confirmed' %}
+                                <span class="text-gray-400 text-xs italic">Done</span>
+                            {% else %}
+                                <div class="flex items-center justify-end gap-2">
+                                    <a href="{% url 'confirm_payment' receipt.id %}" class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700 transition shadow-sm">
+                                        <i data-lucide="check" class="w-3 h-3 mr-1"></i> Confirm
+                                    </a>
+                                    <a href="{% url 'reject_payment' receipt.id %}" onclick="return confirm('Reject this receipt?');" class="inline-flex items-center px-3 py-2 bg-red-100 text-red-700 text-xs font-bold rounded hover:bg-red-200 transition">
+                                        Reject
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="p-8 text-center text-gray-500">No payment receipts uploaded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

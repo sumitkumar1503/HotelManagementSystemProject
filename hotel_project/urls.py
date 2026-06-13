@@ -42,6 +42,12 @@ urlpatterns = [
     path('dashboard/receptionist/guests/', views.receptionist_guest_list, name='receptionist_guest_list'), # NEW
     path('dashboard/receptionist/invoice/<int:booking_id>/', views.generate_invoice, name='generate_invoice'),
     path('dashboard/receptionist/pay/<int:booking_id>/', views.process_checkout_payment, name='process_checkout_payment'),
+    path('dashboard/receptionist/payments/', views.pending_payments, name='pending_payments'),
+    path('dashboard/receptionist/payments/confirm/<int:receipt_id>/', views.confirm_payment, name='confirm_payment'),
+    path('dashboard/receptionist/payments/reject/<int:receipt_id>/', views.reject_payment, name='reject_payment'),
+
+    # Admin Payment Settings
+    path('dashboard/admin/payment-settings/', views.payment_settings, name='payment_settings'),
 
     # Customer Staff
     path('dashboard/customer/', views.customer_dashboard, name='customer_dashboard'),
@@ -49,6 +55,9 @@ urlpatterns = [
     path('dashboard/customer/order-food/', views.order_food, name='order_food'),
     path('dashboard/customer/food-orders/', views.customer_food_history, name='customer_food_history'),
     path('dashboard/customer/profile/', views.customer_profile, name='customer_profile'),
+    path('dashboard/customer/pay/<int:booking_id>/', views.pay_booking, name='pay_booking'),
+    path('dashboard/customer/receipt/edit/<int:receipt_id>/', views.edit_receipt, name='edit_receipt'),
+    path('dashboard/customer/receipt/delete/<int:receipt_id>/', views.delete_receipt, name='delete_receipt'),
 
 
     # Kitchen Staff
