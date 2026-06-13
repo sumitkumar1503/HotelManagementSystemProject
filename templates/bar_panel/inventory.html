@@ -1,6 +1,6 @@
-{% extends 'bar_panel/barbase.html' %}
+{% extends base_template|default:'bar_panel/barbase.html' %}
 {% block title %}Bar Inventory{% endblock %}
-{% block bar_content %}
+{% block panel_content %}
 <div class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-6">
         <div>

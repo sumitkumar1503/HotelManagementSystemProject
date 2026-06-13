@@ -1,11 +1,11 @@
-{% extends 'receptionist_panel/receptionistbase.html' %} 
+{% extends base_template|default:'receptionist_panel/receptionistbase.html' %}
 {% block title %}Guest Invoice{% endblock %}
 
-{% block receptionist_content %}
+{% block panel_content %}
 <div class="max-w-4xl mx-auto">
     <div class="flex justify-between items-center mb-6 no-print">
-        <a href="{% url 'receptionist_dashboard' %}" class="text-gray-500 hover:text-purple-600 flex items-center">
-            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back to Dashboard
+        <a href="javascript:history.back()" class="text-gray-500 hover:text-purple-600 flex items-center">
+            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back
         </a>
         <button onclick="window.print()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center">
             <i data-lucide="printer" class="w-4 h-4 mr-2"></i> Print Invoice

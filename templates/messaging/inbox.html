@@ -1,15 +1,15 @@
-{% extends 'messaging/messagebase.html' %}
+{% extends base_template %}
 {% block title %}Inbox{% endblock %}
-{% block message_content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-3xl font-bold text-gray-800">Inbox</h1>
-</div>
+{% block panel_content %}
+{% include 'messaging/_nav.html' %}
 
-<div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+<div class="max-w-5xl mx-auto">
+  <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
     <table class="w-full text-left">
         <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b">
             <tr>
                 <th class="px-6 py-3">From</th>
+                <th class="px-6 py-3">To</th>
                 <th class="px-6 py-3">Subject</th>
                 <th class="px-6 py-3">Received</th>
                 <th class="px-6 py-3 text-right">Action</th>
@@ -22,6 +22,9 @@
                     {% if not msg.is_read %}<span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>{% endif %}
                     {{ msg.sender.get_full_name|default:msg.sender.username }}
                 </td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-600 border border-indigo-100">{{ msg.target_label }}</span>
+                </td>
                 <td class="px-6 py-4 text-gray-700">{{ msg.subject|default:"(No subject)" }}</td>
                 <td class="px-6 py-4 text-sm text-gray-500">{{ msg.created_at|date:"M d, H:i" }}</td>
                 <td class="px-6 py-4 text-right">
@@ -29,12 +32,14 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="p-10 text-center text-gray-500">
+            <tr><td colspan="5" class="p-10 text-center text-gray-500">
                 <i data-lucide="inbox" class="w-10 h-10 mx-auto text-gray-300 mb-2"></i>
                 <p>Your inbox is empty.</p>
             </td></tr>
             {% endfor %}
         </tbody>
     </table>
+  </div>
 </div>
+<script>lucide.createIcons();</script>
 {% endblock %}

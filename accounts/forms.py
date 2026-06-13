@@ -281,30 +281,28 @@ class BranchForm(forms.ModelForm):
         }
 
 
-class MessageForm(forms.ModelForm):
-    class Meta:
-        model = Message
-        fields = ['recipient', 'subject', 'body']
-        widgets = {
-            'recipient': forms.Select(attrs={'class': 'form-select'}),
-            'subject': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Subject (e.g. Fresh towels request)'}),
-            'body': forms.Textarea(attrs={'class': 'form-input', 'rows': 5, 'placeholder': 'Type your message...'}),
-        }
+class MessageForm(forms.Form):
+    """Compose a message addressed to a whole department/role."""
+    department = forms.ChoiceField(
+        choices=Message.DEPARTMENT_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Send to",
+    )
+    subject = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Subject (e.g. Fresh towels request)'}),
+    )
+    body = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-input', 'rows': 5, 'placeholder': 'Type your message...'}),
+    )
 
-    def __init__(self, *args, sender=None, **kwargs):
+    def __init__(self, *args, exclude_department=None, **kwargs):
         super().__init__(*args, **kwargs)
-        qs = CustomUser.objects.exclude(is_active=False).order_by('role', 'username')
-        if sender is not None:
-            qs = qs.exclude(id=sender.id)
-        self.fields['recipient'].queryset = qs
-        self.fields['recipient'].label_from_instance = self._label
-
-    @staticmethod
-    def _label(user):
-        name = user.get_full_name() or user.username
-        if user.role == 'employee' and hasattr(user, 'employee_profile'):
-            return f"{name} ({user.employee_profile.get_job_type_display()})"
-        return f"{name} ({user.get_role_display()})"
+        # Don't let staff message their own department (they're in it).
+        if exclude_department:
+            self.fields['department'].choices = [
+                c for c in Message.DEPARTMENT_CHOICES if c[0] != exclude_department
+            ]
 
 
 class SiteSettingForm(forms.ModelForm):

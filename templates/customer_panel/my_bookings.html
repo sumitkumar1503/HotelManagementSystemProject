@@ -126,11 +126,21 @@
                                 <span class="text-xs text-gray-400 italic">—</span>
                             {% else %}
                                 <div class="flex flex-col items-end gap-2">
-                                    {% if booking.is_paid %}
+                                    {% if booking.payment_status == 'Paid' %}
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
                                             <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i> Paid
                                         </span>
+                                    {% elif booking.payment_status == 'Payment Confirmation Pending' %}
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                                            <i data-lucide="clock" class="w-3 h-3 mr-1"></i> Confirmation Pending
+                                        </span>
+                                        <a href="{% url 'pay_booking' booking.id %}" class="text-[11px] text-indigo-600 hover:underline">View / re-upload receipt</a>
                                     {% else %}
+                                        {% if booking.payment_status == 'Payment Rejected' %}
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                                            <i data-lucide="x-circle" class="w-3 h-3 mr-1"></i> Rejected
+                                        </span>
+                                        {% endif %}
                                         <a href="{% url 'pay_booking' booking.id %}" class="inline-flex items-center px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 shadow-sm transition">
                                             <i data-lucide="credit-card" class="w-3 h-3 mr-1"></i> Pay Now
                                         </a>

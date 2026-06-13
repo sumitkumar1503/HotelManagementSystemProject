@@ -30,6 +30,9 @@ def index(request):
 def room_list(request):
     # View for "All Rooms" page
     rooms = Room.objects.filter(room_status='available')
+    # Logged-in guests keep their dashboard sidebar while browsing rooms.
+    if request.user.is_authenticated and request.user.role == 'customer':
+        return render(request, 'customer_panel/browse_rooms.html', {'rooms': rooms})
     return render(request, 'common/rooms.html', {'rooms': rooms})
 
 def book_room_placeholder(request, room_id):
@@ -63,8 +66,9 @@ def book_room(request, room_id):
             room.room_status = 'occupied' 
             room.save()
             
-            messages.success(request, f"Success! You have booked Room {room.room_number}. It is now reserved for you.")
-            return redirect('customer_dashboard')
+            messages.success(request, f"Room {room.room_number} reserved! Please complete your payment to confirm the booking.")
+            # Send the guest straight to the payment / receipt-upload page.
+            return redirect('pay_booking', booking_id=booking.id)
     else:
         form = BookingForm()
     
@@ -549,6 +553,9 @@ def housekeeping_history(request):
 @login_required
 @employee_required(allowed_jobs=['housekeeping'])
 def housekeeping_profile(request):
+    if not hasattr(request.user, 'employee_profile'):
+        messages.error(request, "Staff profile is only available to staff accounts.")
+        return redirect('home')
     employee_profile = request.user.employee_profile
     
     if request.method == 'POST':
@@ -720,6 +727,9 @@ def admin_kitchen_monitor(request):
 @login_required
 @employee_required(allowed_jobs=['kitchen'])
 def kitchen_profile(request):
+    if not hasattr(request.user, 'employee_profile'):
+        messages.error(request, "Staff profile is only available to staff accounts.")
+        return redirect('home')
     employee_profile = request.user.employee_profile
     
     if request.method == 'POST':
@@ -842,6 +852,7 @@ def generate_invoice(request, booking_id):
         'vat_rate': vat_rate,
         'vat_amount': vat_amount,
         'grand_total': grand_total,
+        'base_template': _panel_base(request),
     }
 
     # CHECK FOR DOWNLOAD MODE
@@ -1045,6 +1056,8 @@ def _panel_base(request):
     """Return the correct base template for shared pages, based on the user's role."""
     if request.user.role == 'admin':
         return 'admin_panel/adminbase.html'
+    if request.user.role == 'customer':
+        return 'customer_panel/customerbase.html'
     if request.user.role == 'employee' and hasattr(request.user, 'employee_profile'):
         job = request.user.employee_profile.job_type
         return {
@@ -1206,7 +1219,7 @@ def bar_history(request):
 @employee_required(allowed_jobs=['bar', 'manager'])
 def bar_inventory(request):
     drinks = Drink.objects.all().order_by('name')
-    return render(request, 'bar_panel/inventory.html', {'drinks': drinks})
+    return render(request, 'bar_panel/inventory.html', {'drinks': drinks, 'base_template': _panel_base(request)})
 
 
 @login_required
@@ -1220,7 +1233,7 @@ def add_drink(request):
             return redirect('bar_inventory')
     else:
         form = DrinkForm()
-    return render(request, 'bar_panel/drink_form.html', {'form': form, 'title': 'Add Drink'})
+    return render(request, 'bar_panel/drink_form.html', {'form': form, 'title': 'Add Drink', 'base_template': _panel_base(request)})
 
 
 @login_required
@@ -1235,7 +1248,7 @@ def edit_drink(request, drink_id):
             return redirect('bar_inventory')
     else:
         form = DrinkForm(instance=drink)
-    return render(request, 'bar_panel/drink_form.html', {'form': form, 'title': 'Edit Drink'})
+    return render(request, 'bar_panel/drink_form.html', {'form': form, 'title': 'Edit Drink', 'base_template': _panel_base(request)})
 
 
 @login_required
@@ -1264,12 +1277,16 @@ def restock_drink(request, drink_id):
             return redirect('bar_inventory')
     else:
         form = RestockForm()
-    return render(request, 'bar_panel/restock.html', {'form': form, 'drink': drink})
+    return render(request, 'bar_panel/restock.html', {'form': form, 'drink': drink, 'base_template': _panel_base(request)})
 
 
 @login_required
 @employee_required(allowed_jobs=['bar'])
 def bar_profile(request):
+    # Profile pages are only meaningful for the actual staff member.
+    if not hasattr(request.user, 'employee_profile'):
+        messages.error(request, "Staff profile is only available to staff accounts.")
+        return redirect('home')
     employee_profile = request.user.employee_profile
     if request.method == 'POST':
         form = EmployeeEditForm(request.POST, request.FILES, instance=request.user)
@@ -1329,36 +1346,104 @@ def mark_bar_paid(request, order_id):
 # ===========================================================================
 # IN-APP MESSAGING
 # ===========================================================================
+def _current_department(user):
+    """Return the department code for a user (used to hide their own dept in compose)."""
+    if user.role == 'admin':
+        return 'admin'
+    if user.role == 'employee' and hasattr(user, 'employee_profile'):
+        return user.employee_profile.job_type
+    return None
+
+
+def _department_recipients(department):
+    """All active users belonging to a department/role."""
+    if department == 'admin':
+        return CustomUser.objects.filter(role='admin', is_active=True)
+    return CustomUser.objects.filter(
+        role='employee', is_active=True, employee_profile__job_type=department
+    )
+
+
 @login_required
 def inbox(request):
     received = Message.objects.filter(recipient=request.user).select_related('sender')
-    return render(request, 'messaging/inbox.html', {'messages_list': received})
+    return render(request, 'messaging/inbox.html', {
+        'messages_list': received,
+        'base_template': _panel_base(request),
+        'active_tab': 'inbox',
+    })
 
 
 @login_required
 def sent_messages(request):
     sent = Message.objects.filter(sender=request.user).select_related('recipient')
-    return render(request, 'messaging/sent.html', {'messages_list': sent})
+    return render(request, 'messaging/sent.html', {
+        'messages_list': sent,
+        'base_template': _panel_base(request),
+        'active_tab': 'sent',
+    })
 
 
 @login_required
 def compose_message(request):
-    initial = {}
-    to_id = request.GET.get('to')
-    if to_id:
-        initial['recipient'] = to_id
+    my_dept = _current_department(request.user)
 
     if request.method == 'POST':
-        form = MessageForm(request.POST, sender=request.user)
+        form = MessageForm(request.POST, exclude_department=my_dept)
         if form.is_valid():
-            msg = form.save(commit=False)
-            msg.sender = request.user
-            msg.save()
-            messages.success(request, "Message sent successfully!")
+            department = form.cleaned_data['department']
+            subject = form.cleaned_data['subject']
+            body = form.cleaned_data['body']
+
+            recipients = _department_recipients(department).exclude(id=request.user.id)
+            count = 0
+            for user in recipients:
+                Message.objects.create(
+                    sender=request.user,
+                    recipient=user,
+                    recipient_role=department,
+                    subject=subject,
+                    body=body,
+                )
+                count += 1
+
+            dept_label = dict(Message.DEPARTMENT_CHOICES).get(department, department)
+            if count:
+                messages.success(request, f"Message sent to {count} {dept_label} member(s).")
+            else:
+                messages.warning(request, "No active staff found in that department, message not delivered.")
             return redirect('sent_messages')
     else:
-        form = MessageForm(sender=request.user, initial=initial)
-    return render(request, 'messaging/compose.html', {'form': form})
+        form = MessageForm(exclude_department=my_dept)
+    return render(request, 'messaging/compose.html', {
+        'form': form,
+        'base_template': _panel_base(request),
+        'active_tab': 'compose',
+    })
+
+
+@login_required
+def reply_message(request, message_id):
+    """Reply directly to the person who sent you a message."""
+    original = get_object_or_404(Message, id=message_id)
+    if request.user not in [original.sender, original.recipient]:
+        return redirect('inbox')
+
+    target = original.sender if original.sender != request.user else original.recipient
+    body = (request.POST.get('body') or '').strip()
+    if request.method == 'POST' and body:
+        subject = original.subject if original.subject.lower().startswith('re:') else f"Re: {original.subject}".strip()
+        Message.objects.create(
+            sender=request.user,
+            recipient=target,
+            recipient_role='',
+            subject=subject,
+            body=body,
+        )
+        messages.success(request, f"Reply sent to {target.get_full_name() or target.username}.")
+    else:
+        messages.error(request, "Reply cannot be empty.")
+    return redirect('view_message', message_id=original.id)
 
 
 @login_required
@@ -1369,7 +1454,10 @@ def view_message(request, message_id):
     if msg.recipient == request.user and not msg.is_read:
         msg.is_read = True
         msg.save()
-    return render(request, 'messaging/view_message.html', {'msg': msg})
+    return render(request, 'messaging/view_message.html', {
+        'msg': msg,
+        'base_template': _panel_base(request),
+    })
 
 
 @login_required

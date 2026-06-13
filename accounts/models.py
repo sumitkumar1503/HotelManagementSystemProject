@@ -154,6 +154,18 @@ class Booking(models.Model):
         elif self.actual_check_in:
             return "Checked In"
         return "Booked"
+
+    @property
+    def payment_status(self):
+        """Human-friendly payment state for the booking."""
+        if self.is_paid:
+            return "Paid"
+        # Any uploaded-but-not-confirmed receipt => awaiting receptionist confirmation
+        if self.receipts.filter(status=PaymentReceipt.STATUS_PENDING).exists():
+            return "Payment Confirmation Pending"
+        if self.receipts.filter(status=PaymentReceipt.STATUS_REJECTED).exists():
+            return "Payment Rejected"
+        return "Unpaid"
     
 
 class FoodItem(models.Model):
@@ -396,8 +408,19 @@ class StockTransaction(models.Model):
 # IN-APP MESSAGING
 # ---------------------------------------------------------------------------
 class Message(models.Model):
+    DEPARTMENT_CHOICES = [
+        ('receptionist', 'Reception'),
+        ('kitchen', 'Kitchen'),
+        ('bar', 'Bar'),
+        ('housekeeping', 'Housekeeping'),
+        ('manager', 'Manager'),
+        ('admin', 'Admin / Front Office'),
+    ]
+
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages')
     recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='received_messages')
+    # The department this message was addressed to (blank for a direct reply to a guest)
+    recipient_role = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES, blank=True)
     subject = models.CharField(max_length=150, blank=True)
     body = models.TextField()
     is_read = models.BooleanField(default=False)
@@ -408,6 +431,12 @@ class Message(models.Model):
 
     def __str__(self):
         return f"From {self.sender} to {self.recipient}"
+
+    @property
+    def target_label(self):
+        if self.recipient_role:
+            return self.get_recipient_role_display()
+        return self.recipient.get_full_name() or self.recipient.username
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
-{% extends 'bar_panel/barbase.html' %}
+{% extends base_template|default:'bar_panel/barbase.html' %}
 {% block title %}Restock{% endblock %}
-{% block bar_content %}
+{% block panel_content %}
 <div class="max-w-md mx-auto">
     <h2 class="text-3xl font-bold text-gray-800 mb-2">Restock</h2>
     <p class="text-gray-500 mb-6">{{ drink.name }} — current stock: <span class="font-bold">{{ drink.stock_quantity }}</span></p>

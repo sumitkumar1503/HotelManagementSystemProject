@@ -1,6 +1,6 @@
-{% extends 'bar_panel/barbase.html' %}
+{% extends base_template|default:'bar_panel/barbase.html' %}
 {% block title %}{{ title }}{% endblock %}
-{% block bar_content %}
+{% block panel_content %}
 <div class="max-w-xl mx-auto">
     <h2 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h2>
     <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">

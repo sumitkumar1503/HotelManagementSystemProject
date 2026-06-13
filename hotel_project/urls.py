@@ -63,6 +63,7 @@ urlpatterns = [
     path('messages/sent/', views.sent_messages, name='sent_messages'),
     path('messages/compose/', views.compose_message, name='compose_message'),
     path('messages/<int:message_id>/', views.view_message, name='view_message'),
+    path('messages/<int:message_id>/reply/', views.reply_message, name='reply_message'),
     path('messages/<int:message_id>/delete/', views.delete_message, name='delete_message'),
 
     # Bar - Staff

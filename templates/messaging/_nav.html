@@ -1,0 +1,23 @@
+<div class="max-w-5xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-2">
+      <i data-lucide="mail" class="w-7 h-7 text-indigo-600"></i> Messages
+    </h1>
+    <a href="{% url 'compose_message' %}" class="inline-flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-500 transition shadow-sm">
+      <i data-lucide="pen-line" class="w-4 h-4"></i> Compose
+    </a>
+  </div>
+
+  <div class="flex items-center gap-2 mb-6 border-b border-gray-200">
+    <a href="{% url 'inbox' %}" class="px-4 py-2 text-sm font-semibold border-b-2 transition flex items-center gap-1 {% if active_tab == 'inbox' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+      <i data-lucide="inbox" class="w-4 h-4"></i> Inbox
+      {% if unread_messages %}<span class="bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
+    </a>
+    <a href="{% url 'sent_messages' %}" class="px-4 py-2 text-sm font-semibold border-b-2 transition flex items-center gap-1 {% if active_tab == 'sent' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+      <i data-lucide="send" class="w-4 h-4"></i> Sent
+    </a>
+    <a href="{% url 'compose_message' %}" class="px-4 py-2 text-sm font-semibold border-b-2 transition flex items-center gap-1 {% if active_tab == 'compose' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+      <i data-lucide="pen-line" class="w-4 h-4"></i> Compose
+    </a>
+  </div>
+</div>
