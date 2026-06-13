@@ -12,8 +12,8 @@
         </a>
     </div>
 
-    <div class="bg-white rounded-xl shadow-lg border border-fuchsia-100 overflow-hidden">
-        <table class="w-full text-left">
+    <div class="bg-white rounded-xl shadow-lg border border-fuchsia-100 overflow-x-auto">
+        <table class="w-full text-left min-w-[640px]">
             <thead class="bg-fuchsia-50 text-fuchsia-900 text-xs uppercase font-semibold border-b border-fuchsia-100">
                 <tr>
                     <th class="px-6 py-4">Drink</th>
@@ -63,5 +63,6 @@
             </tbody>
         </table>
     </div>
+    {% include 'common/_pagination.html' %}
 </div>
 {% endblock %}

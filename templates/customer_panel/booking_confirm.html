@@ -6,7 +6,7 @@
     </div>
     <h2 class="text-3xl font-bold text-gray-800 mb-4">Booking Initiated!</h2>
     <p class="text-gray-600 text-lg mb-6">
-        You are about to book <strong>{{ room.get_room_type_display }} (Room {{ room.room_number }})</strong> for ${{ room.price_per_night }}/night.
+        You are about to book <strong>{{ room.get_room_type_display }} (Room {{ room.room_number }})</strong> for {{ site_currency }}{{ room.price_per_night }}/night.
     </p>
     <p class="text-sm text-gray-500 mb-8">
         (This is a placeholder page. The full Booking Form with Date Selection will be implemented in the next step.)

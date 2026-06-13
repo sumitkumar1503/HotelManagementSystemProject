@@ -231,6 +231,9 @@
     </div>
   </aside>
 
+  <!-- Mobile backdrop -->
+  <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
+
   <!-- Main Content Wrapper -->
   <div id="main-content" class="main-content flex-1 flex flex-col md:ml-64">
     <!-- TOP NAVBAR -->
@@ -292,11 +295,14 @@
   // Mobile Sidebar Toggle
   const menuButton = document.getElementById('menu-button');
   const sidebar = document.getElementById('sidebar');
-  const mainContent = document.getElementById('main-content');
+  const backdrop = document.getElementById('sidebar-backdrop');
 
-  menuButton.addEventListener('click', () => {
-    sidebar.classList.toggle('-translate-x-full');
-  });
+  const openSidebar = () => { sidebar.classList.remove('-translate-x-full'); if(backdrop) backdrop.classList.remove('hidden'); };
+  const closeSidebar = () => { sidebar.classList.add('-translate-x-full'); if(backdrop) backdrop.classList.add('hidden'); };
+
+  if(menuButton) menuButton.addEventListener('click', openSidebar);
+  if(backdrop) backdrop.addEventListener('click', closeSidebar);
+  sidebar.querySelectorAll('nav a').forEach(a => a.addEventListener('click', () => { if(window.innerWidth < 768) closeSidebar(); }));
 
   // Submenu Logic (Dropdowns)
   function setupSubmenu(toggleId, submenuId, chevronId) {

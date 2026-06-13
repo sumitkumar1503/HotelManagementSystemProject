@@ -16,10 +16,16 @@ from .forms import (
     DrinkForm, RestockForm, BranchForm, MessageForm, SiteSettingForm,
 )
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db.models.functions import TruncMonth, TruncDay 
 from .decorators import admin_required, customer_required, employee_required
 from datetime import timedelta, date
 # --- COMMON VIEWS ---
+
+
+def paginate(request, queryset, per_page=10):
+    """Return a Page object for the given queryset (10 items per page by default)."""
+    return Paginator(queryset, per_page).get_page(request.GET.get('page'))
 
 
 def index(request):
@@ -220,7 +226,8 @@ def add_employee(request):
 def view_employees(request):
     # Fetch all users who have an employee profile
     employees = Employee.objects.select_related('user').all().order_by('-id')
-    return render(request, 'admin_panel/view_employees.html', {'employees': employees})
+    page_obj = paginate(request, employees)
+    return render(request, 'admin_panel/view_employees.html', {'employees': page_obj, 'page_obj': page_obj})
 
 @login_required
 @admin_required
@@ -258,7 +265,8 @@ def delete_employee(request, employee_id):
 @admin_required
 def view_rooms(request):
     rooms = Room.objects.all().order_by('room_number')
-    return render(request, 'admin_panel/view_rooms.html', {'rooms': rooms})
+    page_obj = paginate(request, rooms)
+    return render(request, 'admin_panel/view_rooms.html', {'rooms': page_obj, 'page_obj': page_obj})
 
 @login_required
 @admin_required
@@ -302,7 +310,8 @@ def delete_room(request, room_id):
 @admin_required
 def view_guests(request):
     guests = Customer.objects.select_related('user').all().order_by('-id')
-    return render(request, 'admin_panel/view_guests.html', {'guests': guests})
+    page_obj = paginate(request, guests)
+    return render(request, 'admin_panel/view_guests.html', {'guests': page_obj, 'page_obj': page_obj})
 
 @login_required
 @admin_required
@@ -399,7 +408,8 @@ def customer_profile(request):
 def customer_bookings(request):
     # Show ALL bookings on this separate page
     all_bookings = Booking.objects.filter(user=request.user).order_by('-id')
-    return render(request, 'customer_panel/my_bookings.html', {'bookings': all_bookings})
+    page_obj = paginate(request, all_bookings)
+    return render(request, 'customer_panel/my_bookings.html', {'bookings': page_obj, 'page_obj': page_obj})
 from datetime import date
 
 @login_required
@@ -449,16 +459,19 @@ def housekeeping_dashboard(request):
 
 
 @login_required
-@employee_required(allowed_jobs=['receptionist',  'admin']) 
+@employee_required(allowed_jobs=['receptionist', 'manager', 'admin'])
 # Note: Admins pass this check if you add 'admin' to role logic or separate decorators
 def view_bookings(request):
     # Show active bookings (not yet checked out) first
     bookings = Booking.objects.select_related('user', 'room').order_by('-id')
+    page_obj = paginate(request, bookings)
     # RENDER DIFFERENT TEMPLATE BASED ON ROLE
-    if request.user.role == 'receptionist' or (request.user.role == 'employee' and request.user.employee_profile.job_type == 'receptionist'):
-        return render(request, 'receptionist_panel/booking_history.html', {'bookings': bookings})
-        
-    return render(request, 'admin_panel/view_bookings.html', {'bookings': bookings})
+    if request.user.role == 'employee' and hasattr(request.user, 'employee_profile') and request.user.employee_profile.job_type == 'receptionist':
+        return render(request, 'receptionist_panel/booking_history.html', {'bookings': page_obj, 'page_obj': page_obj})
+
+    return render(request, 'admin_panel/view_bookings.html', {
+        'bookings': page_obj, 'page_obj': page_obj, 'base_template': _panel_base(request),
+    })
 
 @login_required
 def staff_check_in(request, booking_id):
@@ -542,13 +555,15 @@ def mark_room_clean(request, room_id):
 @admin_required
 def view_cleaning_logs(request):
     logs = CleaningLog.objects.select_related('room', 'employee__user').order_by('-cleaned_at')
-    return render(request, 'admin_panel/view_cleaning_logs.html', {'logs': logs})
+    page_obj = paginate(request, logs)
+    return render(request, 'admin_panel/view_cleaning_logs.html', {'logs': page_obj, 'page_obj': page_obj})
 @login_required
 @employee_required(allowed_jobs=['housekeeping'])
 def housekeeping_history(request):
     # Fetch ALL history for this employee
     my_history = CleaningLog.objects.filter(employee=request.user.employee_profile).order_by('-cleaned_at')
-    return render(request, 'housekeeping_panel/history.html', {'logs': my_history})
+    page_obj = paginate(request, my_history)
+    return render(request, 'housekeeping_panel/history.html', {'logs': page_obj, 'page_obj': page_obj})
 
 @login_required
 @employee_required(allowed_jobs=['housekeeping'])
@@ -629,7 +644,8 @@ def kitchen_dashboard(request):
 def kitchen_history(request):
     # Fetch only DELIVERED orders
     delivered_orders = FoodOrder.objects.filter(status='delivered').order_by('-created_at')
-    return render(request, 'kitchen_panel/history.html', {'orders': delivered_orders})
+    page_obj = paginate(request, delivered_orders)
+    return render(request, 'kitchen_panel/history.html', {'orders': page_obj, 'page_obj': page_obj})
 
 
 @login_required
@@ -663,16 +679,19 @@ def admin_kitchen_history(request):
         .values('chef__user__username', 'chef__user__first_name', 'chef__user__last_name', 'chef__user__profile_picture')\
         .annotate(total_delivered=Count('id'))\
         .order_by('-total_delivered')
-        
+
+    page_obj = paginate(request, delivered_orders)
     return render(request, 'admin_panel/kitchen_history.html', {
-        'orders': delivered_orders,
+        'orders': page_obj,
+        'page_obj': page_obj,
         'stats': chef_stats
     })
 @login_required
 @admin_required
 def view_food_menu(request):
     food_items = FoodItem.objects.all().order_by('category', 'name')
-    return render(request, 'admin_panel/view_food_menu.html', {'food_items': food_items})
+    page_obj = paginate(request, food_items)
+    return render(request, 'admin_panel/view_food_menu.html', {'food_items': page_obj, 'page_obj': page_obj})
 
 @login_required
 @admin_required
@@ -715,7 +734,8 @@ def delete_food_item(request, item_id):
 def customer_food_history(request):
     # NEW: Show food orders for the current user
     orders = FoodOrder.objects.filter(booking__user=request.user).order_by('-created_at')
-    return render(request, 'customer_panel/food_history.html', {'orders': orders})
+    page_obj = paginate(request, orders)
+    return render(request, 'customer_panel/food_history.html', {'orders': page_obj, 'page_obj': page_obj})
 @login_required
 @admin_required
 def admin_kitchen_monitor(request):
@@ -997,7 +1017,8 @@ def delete_receipt(request, receipt_id):
 def pending_payments(request):
     """Receptionist/Admin queue of uploaded receipts awaiting confirmation."""
     receipts = PaymentReceipt.objects.select_related('booking__user', 'booking__room').order_by('-uploaded_at')
-    return render(request, 'receptionist_panel/pending_payments.html', {'receipts': receipts})
+    page_obj = paginate(request, receipts)
+    return render(request, 'receptionist_panel/pending_payments.html', {'receipts': page_obj, 'page_obj': page_obj})
 
 
 @login_required
@@ -1182,8 +1203,9 @@ def order_drinks(request):
 @login_required
 @customer_required
 def customer_bar_history(request):
-    orders = BarOrder.objects.filter(booking__user=request.user).prefetch_related('items__drink')
-    return render(request, 'customer_panel/bar_history.html', {'orders': orders})
+    orders = BarOrder.objects.filter(booking__user=request.user).prefetch_related('items__drink').order_by('-created_at')
+    page_obj = paginate(request, orders)
+    return render(request, 'customer_panel/bar_history.html', {'orders': page_obj, 'page_obj': page_obj})
 
 
 # ===========================================================================
@@ -1211,15 +1233,17 @@ def update_bar_order_status(request, order_id, status):
 @login_required
 @employee_required(allowed_jobs=['bar'])
 def bar_history(request):
-    orders = BarOrder.objects.filter(status='served').prefetch_related('items__drink')
-    return render(request, 'bar_panel/history.html', {'orders': orders})
+    orders = BarOrder.objects.filter(status='served').prefetch_related('items__drink').order_by('-created_at')
+    page_obj = paginate(request, orders)
+    return render(request, 'bar_panel/history.html', {'orders': page_obj, 'page_obj': page_obj})
 
 
 @login_required
 @employee_required(allowed_jobs=['bar', 'manager'])
 def bar_inventory(request):
     drinks = Drink.objects.all().order_by('name')
-    return render(request, 'bar_panel/inventory.html', {'drinks': drinks, 'base_template': _panel_base(request)})
+    page_obj = paginate(request, drinks)
+    return render(request, 'bar_panel/inventory.html', {'drinks': page_obj, 'page_obj': page_obj, 'base_template': _panel_base(request)})
 
 
 @login_required
@@ -1367,8 +1391,10 @@ def _department_recipients(department):
 @login_required
 def inbox(request):
     received = Message.objects.filter(recipient=request.user).select_related('sender')
+    page_obj = paginate(request, received)
     return render(request, 'messaging/inbox.html', {
-        'messages_list': received,
+        'messages_list': page_obj,
+        'page_obj': page_obj,
         'base_template': _panel_base(request),
         'active_tab': 'inbox',
     })
@@ -1377,8 +1403,10 @@ def inbox(request):
 @login_required
 def sent_messages(request):
     sent = Message.objects.filter(sender=request.user).select_related('recipient')
+    page_obj = paginate(request, sent)
     return render(request, 'messaging/sent.html', {
-        'messages_list': sent,
+        'messages_list': page_obj,
+        'page_obj': page_obj,
         'base_template': _panel_base(request),
         'active_tab': 'sent',
     })
@@ -1476,7 +1504,8 @@ def delete_message(request, message_id):
 @employee_required(allowed_jobs=['manager'])
 def manage_branches(request):
     branches = Branch.objects.all()
-    return render(request, 'admin_panel/branches.html', {'branches': branches, 'base_template': _panel_base(request)})
+    page_obj = paginate(request, branches)
+    return render(request, 'admin_panel/branches.html', {'branches': page_obj, 'page_obj': page_obj, 'base_template': _panel_base(request)})
 
 
 @login_required

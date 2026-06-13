@@ -17,7 +17,7 @@
 </head>
 <body class="flex min-h-screen">
   <!-- Sidebar -->
-  <aside class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl transition-transform duration-300">
+  <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl transform -translate-x-full md:translate-x-0 transition-transform duration-300">
     <div class="flex items-center justify-center p-6 border-b border-white/20">
       <i data-lucide="chef-hat" class="w-8 h-8 mr-3 text-orange-300"></i>
       <h1 class="text-xl font-bold">Kitchen</h1>
@@ -77,11 +77,17 @@
     </div>
   </aside>
 
+  <!-- Mobile backdrop -->
+  <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
+
   <!-- Main -->
-  <main class="flex-1 ml-64 p-8">
-    <!-- Top Bar for Mobile/Context (Optional, but good for consistency) -->
+  <main class="flex-1 md:ml-64 p-4 md:p-8">
+    <!-- Top Bar for Mobile/Context -->
     <div class="md:hidden mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
-        <span class="font-bold text-gray-800">Kitchen Display System</span>
+        <div class="flex items-center gap-3">
+            <button id="menu-button" class="text-orange-700"><i data-lucide="menu" class="w-6 h-6"></i></button>
+            <span class="font-bold text-gray-800">Kitchen</span>
+        </div>
         <div class="flex items-center gap-2">
              <span class="text-sm">{{ user.username }}</span>
         </div>
@@ -100,6 +106,19 @@
     {% block kitchen_content %}{% endblock %}
     {% block panel_content %}{% endblock %}
   </main>
-  <script>lucide.createIcons();</script>
+  <script>
+    lucide.createIcons();
+    (function(){
+      const btn = document.getElementById('menu-button');
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if(!sidebar) return;
+      const open = () => { sidebar.classList.remove('-translate-x-full'); if(backdrop) backdrop.classList.remove('hidden'); };
+      const close = () => { sidebar.classList.add('-translate-x-full'); if(backdrop) backdrop.classList.add('hidden'); };
+      if(btn) btn.addEventListener('click', open);
+      if(backdrop) backdrop.addEventListener('click', close);
+      sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { if(window.innerWidth < 768) close(); }));
+    })();
+  </script>
 </body>
 </html>

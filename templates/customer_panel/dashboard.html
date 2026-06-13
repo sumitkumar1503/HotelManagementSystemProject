@@ -23,7 +23,7 @@
             </div>
             <div>
                 <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Invested</p>
-                <h3 class="text-2xl font-black text-gray-800">${{ total_spent }}</h3>
+                <h3 class="text-2xl font-black text-gray-800">{{ site_currency }}{{ total_spent }}</h3>
                 <p class="text-xs text-green-600 font-medium">Lifetime value</p>
             </div>
         </div>
@@ -130,7 +130,7 @@
 
                         <!-- Price Column -->
                         <td class="px-6 py-4 text-right">
-                            <p class="font-bold text-gray-800">${{ booking.room.price_per_night }}</p>
+                            <p class="font-bold text-gray-800">{{ site_currency }}{{ booking.room.price_per_night }}</p>
                             <p class="text-[10px] text-gray-400 uppercase">Per Night</p>
                         </td>
                     </tr>

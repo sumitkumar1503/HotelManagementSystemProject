@@ -4,8 +4,8 @@
 {% include 'messaging/_nav.html' %}
 
 <div class="max-w-5xl mx-auto">
-  <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-    <table class="w-full text-left">
+  <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-x-auto">
+    <table class="w-full text-left min-w-[600px]">
         <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b">
             <tr>
                 <th class="px-6 py-3">To</th>
@@ -32,6 +32,7 @@
         </tbody>
     </table>
   </div>
+  {% include 'common/_pagination.html' %}
 </div>
 <script>lucide.createIcons();</script>
 {% endblock %}

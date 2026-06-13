@@ -1,7 +1,7 @@
-{% extends 'admin_panel/adminbase.html' %}
+{% extends base_template|default:'admin_panel/adminbase.html' %}
 {% block title %}Manage Bookings{% endblock %}
 
-{% block admin_content %}
+{% block panel_content %}
 <div class="max-w-7xl mx-auto">
     <div class="mb-8">
         <h2 class="text-3xl font-bold text-gray-800">Booking Desk</h2>
@@ -125,5 +125,6 @@
             </table>
         </div>
     </div>
+    {% include 'common/_pagination.html' %}
 </div>
 {% endblock %}

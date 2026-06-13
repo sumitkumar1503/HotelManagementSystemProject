@@ -23,7 +23,7 @@
         </div>
         <div class="text-right">
             <p class="text-xs text-gray-400 uppercase font-bold">Amount Due</p>
-            <p class="text-2xl font-black text-indigo-600">${{ amount_due }}</p>
+            <p class="text-2xl font-black text-indigo-600">{{ site_currency }}{{ amount_due }}</p>
             {% if booking.is_paid %}
                 <span class="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded">PAID</span>
             {% else %}
@@ -96,8 +96,8 @@
     <!-- Uploaded receipts -->
     <div class="mt-8">
         <h2 class="text-xl font-bold text-gray-800 mb-4">Your Uploaded Receipts</h2>
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <table class="w-full text-left">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+            <table class="w-full text-left min-w-[560px]">
                 <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b">
                     <tr>
                         <th class="px-6 py-3">File</th>
@@ -116,7 +116,7 @@
                                 <i data-lucide="file-text" class="w-4 h-4"></i> View
                             </a>
                         </td>
-                        <td class="px-6 py-4 font-bold text-gray-800">${{ receipt.amount }}</td>
+                        <td class="px-6 py-4 font-bold text-gray-800">{{ site_currency }}{{ receipt.amount }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ receipt.note|default:"-" }}</td>
                         <td class="px-6 py-4">
                             {% if receipt.status == 'confirmed' %}

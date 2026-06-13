@@ -41,7 +41,8 @@
         <div class="px-8 py-5 border-b border-gray-100 bg-gray-50/50">
             <h2 class="text-lg font-bold text-gray-800">Recent Bookings</h2>
         </div>
-        <table class="w-full text-left">
+        <div class="overflow-x-auto">
+        <table class="w-full text-left min-w-[560px]">
             <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
                 <tr>
                     <th class="px-6 py-3">Guest</th>
@@ -63,6 +64,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 {% endblock %}

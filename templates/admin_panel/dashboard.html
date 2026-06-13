@@ -38,7 +38,7 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-blue-400 text-xs font-bold uppercase tracking-widest mb-1">Total Revenue</p>
-                    <h2 class="text-4xl font-black text-white mt-1 mb-2 tracking-tight">${{ total_revenue }}</h2>
+                    <h2 class="text-4xl font-black text-white mt-1 mb-2 tracking-tight">{{ site_currency }}{{ total_revenue }}</h2>
                 </div>
                 <div class="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 group-hover:bg-blue-500/20 transition">
                     <i data-lucide="dollar-sign" class="w-6 h-6 text-blue-400"></i>
@@ -162,7 +162,7 @@
         data: {
             labels: {{ chart_months|safe }},
             datasets: [{
-                label: 'Revenue ($)',
+                label: 'Revenue ({{ site_currency }})',
                 data: {{ chart_revenue|safe }},
                 borderColor: '#3b82f6',
                 backgroundColor: gradient,
@@ -191,7 +191,7 @@
                     displayColors: false,
                     callbacks: {
                         label: function(context) {
-                            return '$ ' + context.parsed.y;
+                            return '{{ site_currency }} ' + context.parsed.y;
                         }
                     }
                 }
@@ -200,7 +200,7 @@
                 y: {
                     grid: { color: 'rgba(51, 65, 85, 0.3)', borderDash: [5, 5] },
                     ticks: { 
-                        callback: function(value) { return '$' + value; },
+                        callback: function(value) { return '{{ site_currency }}' + value; },
                         font: { size: 11 }
                     },
                     border: { display: false }

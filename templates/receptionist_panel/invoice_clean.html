@@ -59,8 +59,8 @@
                 <tr class="border-b border-gray-50">
                     <td class="py-4 px-4 font-medium">Room Charges ({{ duration }} Nights)</td>
                     <td class="py-4 px-4 text-center">{{ duration }}</td>
-                    <td class="py-4 px-4 text-right">${{ booking.room.price_per_night }}</td>
-                    <td class="py-4 px-4 text-right">${{ room_total }}</td>
+                    <td class="py-4 px-4 text-right">{{ site_currency }}{{ booking.room.price_per_night }}</td>
+                    <td class="py-4 px-4 text-right">{{ site_currency }}{{ room_total }}</td>
                 </tr>
 
                 <!-- Food Charges -->
@@ -69,8 +69,8 @@
                     <tr class="border-b border-gray-50">
                         <td class="py-4 px-4 text-gray-500">Room Service: {{ item.name }}</td>
                         <td class="py-4 px-4 text-center">1</td>
-                        <td class="py-4 px-4 text-right">${{ item.price }}</td>
-                        <td class="py-4 px-4 text-right">${{ item.price }}</td>
+                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.price }}</td>
+                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.price }}</td>
                     </tr>
                     {% endfor %}
                 {% endfor %}
@@ -82,15 +82,15 @@
             <div class="w-1/2">
                 <div class="flex justify-between py-2 border-b border-gray-100 text-sm">
                     <span class="text-gray-600">Subtotal</span>
-                    <span class="font-semibold">${{ grand_total }}</span>
+                    <span class="font-semibold">{{ site_currency }}{{ grand_total }}</span>
                 </div>
                 <div class="flex justify-between py-2 border-b border-gray-100 text-sm">
                     <span class="text-gray-600">Taxes (0%)</span>
-                    <span class="font-semibold">$0.00</span>
+                    <span class="font-semibold">{{ site_currency }}0.00</span>
                 </div>
                 <div class="flex justify-between py-4">
                     <span class="text-xl font-bold text-gray-800">Total Due</span>
-                    <span class="text-xl font-bold text-purple-700">${{ grand_total }}</span>
+                    <span class="text-xl font-bold text-purple-700">{{ site_currency }}{{ grand_total }}</span>
                 </div>
             </div>
         </div>

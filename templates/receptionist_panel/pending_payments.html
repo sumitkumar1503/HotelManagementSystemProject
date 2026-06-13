@@ -42,7 +42,7 @@
                             <span class="text-xs text-gray-400">#{{ receipt.booking.id }} &middot; {{ receipt.booking.check_in|date:"M d" }} → {{ receipt.booking.check_out|date:"M d" }}</span>
                         </td>
                         <td class="p-4 font-bold text-gray-800">
-                            ${{ receipt.amount }}
+                            {{ site_currency }}{{ receipt.amount }}
                             {% if receipt.note %}<p class="text-xs text-gray-400 font-normal">{{ receipt.note }}</p>{% endif %}
                         </td>
                         <td class="p-4">
@@ -81,5 +81,6 @@
             </table>
         </div>
     </div>
+    {% include 'common/_pagination.html' %}
 </div>
 {% endblock %}
