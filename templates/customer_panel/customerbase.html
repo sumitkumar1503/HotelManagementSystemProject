@@ -131,7 +131,8 @@
         <button id="menu-button" class="mr-2 md:hidden">
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
-        <span class="brand-text text-xl">Grand Hotel</span>
+        {% if site_hotel_logo %}<img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="h-7 w-auto rounded">{% endif %}
+        <span class="brand-text text-xl">{{ site_hotel_name|default:"Grand Hotel" }}</span>
       </div>
       
       <div class="flex items-center space-x-4">

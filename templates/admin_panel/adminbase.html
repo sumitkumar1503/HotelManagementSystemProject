@@ -87,9 +87,12 @@
   <aside id="sidebar" class="sidebar w-64 flex-shrink-0 fixed inset-y-0 left-0 z-30 flex flex-col transform -translate-x-full md:translate-x-0 shadow-xl">
     <!-- Brand Logo Area -->
     <div class="flex items-center justify-center p-6 border-b border-white/30">
-      <!-- Changed Icon to Hotel -->
-      <i data-lucide="hotel" class="w-8 h-8 mr-3 text-yellow-300"></i>
-      <h1 class="text-2xl font-bold tracking-wide">Grand Hotel</h1>
+      {% if site_hotel_logo %}
+        <img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="w-9 h-9 mr-3 rounded object-cover bg-white/20">
+      {% else %}
+        <i data-lucide="hotel" class="w-8 h-8 mr-3 text-yellow-300"></i>
+      {% endif %}
+      <h1 class="text-2xl font-bold tracking-wide">{{ site_hotel_name|default:"Grand Hotel" }}</h1>
     </div>
 
     <nav class="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-2">

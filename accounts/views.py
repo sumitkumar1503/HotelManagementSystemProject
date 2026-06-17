@@ -357,9 +357,9 @@ def add_room(request):
         form = RoomForm(request.POST, request.FILES)
         if form.is_valid():
             room = form.save(commit=False)
-            # New rooms belong to the branch currently being managed.
-            if active and not room.branch_id:
-                room.branch = active
+            # New rooms belong to the branch currently being managed (or the default).
+            if not room.branch_id:
+                room.branch = active or _default_branch()
             room.save()
             messages.success(request, "New room added successfully!")
             return redirect('view_rooms')
@@ -893,9 +893,9 @@ def add_food_item(request):
         form = FoodItemForm(request.POST, request.FILES)
         if form.is_valid():
             item = form.save(commit=False)
-            # New menu items default to the branch currently being managed.
-            if active and not item.branch_id:
-                item.branch = active
+            # New menu items default to the branch currently being managed (or the default).
+            if not item.branch_id:
+                item.branch = active or _default_branch()
             item.save()
             messages.success(request, "New food item added to the menu!")
             return redirect('view_food_menu')
@@ -1550,8 +1550,8 @@ def add_drink(request):
         form = DrinkForm(request.POST, request.FILES)
         if form.is_valid():
             drink = form.save(commit=False)
-            if active and not drink.branch_id:
-                drink.branch = active
+            if not drink.branch_id:
+                drink.branch = active or _default_branch()
             drink.save()
             messages.success(request, "New drink added to the bar menu!")
             return redirect('bar_inventory')
