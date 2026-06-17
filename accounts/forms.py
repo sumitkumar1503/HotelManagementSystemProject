@@ -11,13 +11,14 @@ from .models import Room
 class FoodItemForm(forms.ModelForm):
     class Meta:
         model = FoodItem
-        fields = ['name', 'category', 'price', 'image', 'is_available']
+        fields = ['name', 'category', 'price', 'image', 'is_available', 'branch']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
             'price': forms.NumberInput(attrs={'class': 'form-input'}),
             'image': forms.FileInput(attrs={'class': 'form-input'}),
             'is_available': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'branch': forms.Select(attrs={'class': 'form-select'}),
         }
 class RoomForm(forms.ModelForm):
     class Meta:
@@ -274,10 +275,16 @@ class RestockForm(forms.Form):
 class BranchForm(forms.ModelForm):
     class Meta:
         model = Branch
-        fields = ['name', 'code', 'address', 'city', 'phone', 'email', 'is_active']
+        fields = ['name', 'code', 'logo', 'address', 'city', 'phone', 'email', 'is_active']
+        labels = {
+            'name': 'Hotel / Branch Name',
+            'logo': 'Hotel Logo (shown in navbar, dashboard & invoice)',
+            'address': 'Hotel Address (shown on invoice & website)',
+        }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
             'code': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. NYC01'}),
+            'logo': forms.FileInput(attrs={'class': 'form-input'}),
             'address': forms.Textarea(attrs={'class': 'form-input', 'rows': 2}),
             'city': forms.TextInput(attrs={'class': 'form-input'}),
             'phone': forms.TextInput(attrs={'class': 'form-input'}),

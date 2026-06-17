@@ -180,6 +180,7 @@ class FoodItem(models.Model):
     price = models.DecimalField(max_digits=6, decimal_places=2)
     image = models.ImageField(upload_to='food_images/', blank=True, null=True)
     is_available = models.BooleanField(default=True)
+    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='food_items')
 
     def __str__(self):
         return f"{self.name} (${self.price})"
@@ -273,6 +274,10 @@ class PaymentReceipt(models.Model):
 class Branch(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20, unique=True)
+    # Per-branch hotel identity (shown in the navbar, dashboard and invoices
+    # when this branch is the active / current one).
+    logo = models.ImageField(upload_to='branch_logos/', blank=True, null=True,
+                             help_text="Logo shown in the navbar, dashboard and invoices for this branch.")
     address = models.TextField(blank=True)
     city = models.CharField(max_length=100, blank=True)
     phone = models.CharField(max_length=20, blank=True)

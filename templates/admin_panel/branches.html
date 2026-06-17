@@ -5,11 +5,11 @@
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
             <h1 class="text-3xl font-bold text-gray-800">Branch & Location Management</h1>
-            <p class="text-gray-500">Create and manage multiple hotel branches and locations.</p>
+            <p class="text-gray-500">Each branch is its own hotel: name, logo & address are edited per branch via <strong>Edit</strong>.</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{% url 'site_settings' %}" class="px-5 py-2.5 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600 shadow transition flex items-center gap-2">
-                <i data-lucide="image" class="w-4 h-4"></i> Edit Hotel Details
+                <i data-lucide="settings" class="w-4 h-4"></i> Currency & VAT
             </a>
             <a href="{% url 'add_branch' %}" class="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow transition flex items-center gap-2">
                 <i data-lucide="plus" class="w-4 h-4"></i> Add Branch
@@ -41,9 +41,13 @@
         <div class="bg-white rounded-2xl shadow-sm border p-6 {% if active_branch and active_branch.id == branch.id %}border-emerald-400 ring-2 ring-emerald-200{% else %}border-gray-100{% endif %}">
             <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-                        <i data-lucide="building-2" class="w-6 h-6"></i>
-                    </div>
+                    {% if branch.logo %}
+                        <img src="{{ branch.logo.url }}" alt="{{ branch.name }} logo" class="w-11 h-11 rounded-xl object-cover border border-gray-200">
+                    {% else %}
+                        <div class="w-11 h-11 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+                            <i data-lucide="building-2" class="w-6 h-6"></i>
+                        </div>
+                    {% endif %}
                     <div>
                         <h3 class="font-bold text-gray-800">{{ branch.name }}</h3>
                         <p class="text-xs text-gray-400">{{ branch.code }}</p>

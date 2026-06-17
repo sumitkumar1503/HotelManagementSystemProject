@@ -474,7 +474,12 @@ def edit_guest(request, guest_id):
     else:
         form = CustomerEditForm(instance=user_obj)
     
-    return render(request, 'admin_panel/edit_guest.html', {'form': form, 'guest': guest})
+    return render(request, 'admin_panel/edit_guest.html', {
+        'form': form,
+        'guest': guest,
+        'wallet': _get_wallet(user_obj),
+        'credit_form': WalletCreditForm(),
+    })
 
 @login_required
 @admin_required
@@ -567,6 +572,7 @@ def receptionist_dashboard(request):
     # Removed check_in__lte=today to show ALL upcoming arrivals if needed, 
     # or keep it if you only want past + today. 
     # Request was "all booking", so we remove the date filter to show anyone who hasn't arrived yet.
+    scope = _scope_branch(request)
     arrivals = Booking.objects.filter(
         actual_check_in__isnull=True,
         actual_check_out__isnull=True
@@ -578,11 +584,12 @@ def receptionist_dashboard(request):
         actual_check_in__isnull=False,  # Currently here
         actual_check_out__isnull=True   # Hasn't left
     ).order_by('check_out')
-    
-    in_house = Booking.objects.filter(
-        actual_check_in__isnull=False,
-        actual_check_out__isnull=True
-    ).count()
+
+    if scope:
+        arrivals = arrivals.filter(branch=scope)
+        departures = departures.filter(branch=scope)
+
+    in_house = departures.count()
 
     return render(request, 'receptionist_panel/dashboard.html', {
         'arrivals': arrivals,
@@ -609,7 +616,10 @@ def housekeeping_dashboard(request):
 # Note: Admins pass this check if you add 'admin' to role logic or separate decorators
 def view_bookings(request):
     # Show active bookings (not yet checked out) first
+    scope = _scope_branch(request)
     bookings = Booking.objects.select_related('user', 'room').order_by('-id')
+    if scope:
+        bookings = bookings.filter(branch=scope)
     page_obj = paginate(request, bookings)
     # RENDER DIFFERENT TEMPLATE BASED ON ROLE
     if request.user.role == 'employee' and hasattr(request.user, 'employee_profile') and request.user.employee_profile.job_type == 'receptionist':
@@ -755,7 +765,7 @@ def order_food(request):
         messages.error(request, "You must be checked into a room to order food.")
         return redirect('customer_dashboard')
 
-    menu_items = FoodItem.objects.filter(is_available=True)
+    menu_items = _branch_menu_filter(FoodItem.objects.filter(is_available=True), active_booking.branch)
     wallet = _get_wallet(request.user)
 
     if request.method == 'POST':
@@ -804,14 +814,20 @@ def order_food(request):
 @login_required
 @employee_required(allowed_jobs=['kitchen', 'manager', 'admin'])
 def kitchen_dashboard(request):
+    scope = _scope_branch(request)
     active_orders = FoodOrder.objects.exclude(status='delivered').order_by('created_at')
+    if scope:
+        active_orders = active_orders.filter(booking__branch=scope)
     return render(request, 'kitchen_panel/dashboard.html', {'orders': active_orders})
 
 @login_required
 @employee_required(allowed_jobs=['kitchen', 'manager', 'admin'])
 def kitchen_history(request):
+    scope = _scope_branch(request)
     # Fetch only DELIVERED orders
     delivered_orders = FoodOrder.objects.filter(status='delivered').order_by('-created_at')
+    if scope:
+        delivered_orders = delivered_orders.filter(booking__branch=scope)
     page_obj = paginate(request, delivered_orders)
     return render(request, 'kitchen_panel/history.html', {'orders': page_obj, 'page_obj': page_obj})
 
@@ -839,11 +855,16 @@ from django.db.models import Count
 @login_required
 @admin_required
 def admin_kitchen_history(request):
+    scope = _scope_branch(request)
     # 1. Detailed Log: All delivered orders
     delivered_orders = FoodOrder.objects.filter(status='delivered').select_related('booking__room', 'chef__user').order_by('-created_at')
-    
+    chef_base = FoodOrder.objects.filter(status='delivered')
+    if scope:
+        delivered_orders = delivered_orders.filter(booking__branch=scope)
+        chef_base = chef_base.filter(booking__branch=scope)
+
     # 2. Leaderboard: Count orders per staff member
-    chef_stats = FoodOrder.objects.filter(status='delivered')\
+    chef_stats = chef_base\
         .values('chef__user__username', 'chef__user__first_name', 'chef__user__last_name', 'chef__user__profile_picture')\
         .annotate(total_delivered=Count('id'))\
         .order_by('-total_delivered')
@@ -857,22 +878,30 @@ def admin_kitchen_history(request):
 @login_required
 @admin_required
 def view_food_menu(request):
+    active = _scope_branch(request)
     food_items = FoodItem.objects.all().order_by('category', 'name')
+    if active:
+        food_items = _branch_menu_filter(food_items, active)
     page_obj = paginate(request, food_items)
-    return render(request, 'admin_panel/view_food_menu.html', {'food_items': page_obj, 'page_obj': page_obj})
+    return render(request, 'admin_panel/view_food_menu.html', {'food_items': page_obj, 'page_obj': page_obj, 'active_branch': active})
 
 @login_required
 @admin_required
 def add_food_item(request):
+    active = _active_branch(request)
     if request.method == 'POST':
         form = FoodItemForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            item = form.save(commit=False)
+            # New menu items default to the branch currently being managed.
+            if active and not item.branch_id:
+                item.branch = active
+            item.save()
             messages.success(request, "New food item added to the menu!")
             return redirect('view_food_menu')
     else:
-        form = FoodItemForm()
-    return render(request, 'admin_panel/add_food_item.html', {'form': form, 'title': 'Add Menu Item'})
+        form = FoodItemForm(initial={'branch': active} if active else None)
+    return render(request, 'admin_panel/add_food_item.html', {'form': form, 'title': 'Add Menu Item', 'active_branch': active})
 
 @login_required
 @admin_required
@@ -908,7 +937,10 @@ def customer_food_history(request):
 @admin_required
 def admin_kitchen_monitor(request):
     # NEW: Admin version of the KDS
+    scope = _scope_branch(request)
     active_orders = FoodOrder.objects.exclude(status='delivered').order_by('created_at')
+    if scope:
+        active_orders = active_orders.filter(booking__branch=scope)
     return render(request, 'admin_panel/kitchen_monitor.html', {'orders': active_orders})
 
 
@@ -1044,6 +1076,18 @@ def generate_invoice(request, booking_id):
         'grand_total': grand_total,
         'base_template': _panel_base(request),
     }
+
+    # The invoice always reflects the BRANCH the booking belongs to,
+    # regardless of who is generating it.
+    branch = booking.branch
+    if branch:
+        context.update({
+            'site_hotel_name': branch.name or site.hotel_name,
+            'site_hotel_logo': branch.logo.url if branch.logo else (site.hotel_logo.url if site.hotel_logo else ''),
+            'site_hotel_address': branch.address or site.hotel_address,
+            'site_hotel_phone': branch.phone or site.hotel_phone,
+            'site_hotel_email': branch.email or site.hotel_email,
+        })
 
     # CHECK FOR DOWNLOAD MODE
     if request.GET.get('style') == 'clean':
@@ -1395,7 +1439,7 @@ def order_drinks(request):
         messages.error(request, "You must be checked into a room to order from the bar.")
         return redirect('customer_dashboard')
 
-    drinks = Drink.objects.filter(is_available=True, stock_quantity__gt=0)
+    drinks = _branch_menu_filter(Drink.objects.filter(is_available=True, stock_quantity__gt=0), active_booking.branch)
     wallet = _get_wallet(request.user)
 
     if request.method == 'POST':
@@ -1455,8 +1499,13 @@ def customer_bar_history(request):
 @login_required
 @employee_required(allowed_jobs=['bar'])
 def bar_dashboard(request):
+    scope = _scope_branch(request)
     active_orders = BarOrder.objects.exclude(status='served').prefetch_related('items__drink')
-    low_stock = Drink.objects.filter(stock_quantity__lte=5).order_by('stock_quantity')[:5]
+    low_stock = Drink.objects.filter(stock_quantity__lte=5).order_by('stock_quantity')
+    if scope:
+        active_orders = active_orders.filter(booking__branch=scope)
+        low_stock = _branch_menu_filter(low_stock, scope)
+    low_stock = low_stock[:5]
     return render(request, 'bar_panel/dashboard.html', {'orders': active_orders, 'low_stock': low_stock})
 
 
@@ -1474,7 +1523,10 @@ def update_bar_order_status(request, order_id, status):
 @login_required
 @employee_required(allowed_jobs=['bar'])
 def bar_history(request):
+    scope = _scope_branch(request)
     orders = BarOrder.objects.filter(status='served').prefetch_related('items__drink').order_by('-created_at')
+    if scope:
+        orders = orders.filter(booking__branch=scope)
     page_obj = paginate(request, orders)
     return render(request, 'bar_panel/history.html', {'orders': page_obj, 'page_obj': page_obj})
 
@@ -1482,23 +1534,30 @@ def bar_history(request):
 @login_required
 @employee_required(allowed_jobs=['bar', 'manager'])
 def bar_inventory(request):
+    active = _scope_branch(request)
     drinks = Drink.objects.all().order_by('name')
+    if active:
+        drinks = _branch_menu_filter(drinks, active)
     page_obj = paginate(request, drinks)
-    return render(request, 'bar_panel/inventory.html', {'drinks': page_obj, 'page_obj': page_obj, 'base_template': _panel_base(request)})
+    return render(request, 'bar_panel/inventory.html', {'drinks': page_obj, 'page_obj': page_obj, 'active_branch': active, 'base_template': _panel_base(request)})
 
 
 @login_required
 @employee_required(allowed_jobs=['bar', 'manager'])
 def add_drink(request):
+    active = _active_branch(request)
     if request.method == 'POST':
         form = DrinkForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            drink = form.save(commit=False)
+            if active and not drink.branch_id:
+                drink.branch = active
+            drink.save()
             messages.success(request, "New drink added to the bar menu!")
             return redirect('bar_inventory')
     else:
-        form = DrinkForm()
-    return render(request, 'bar_panel/drink_form.html', {'form': form, 'title': 'Add Drink', 'base_template': _panel_base(request)})
+        form = DrinkForm(initial={'branch': active} if active else None)
+    return render(request, 'bar_panel/drink_form.html', {'form': form, 'title': 'Add Drink', 'active_branch': active, 'base_template': _panel_base(request)})
 
 
 @login_required
@@ -1570,8 +1629,12 @@ def bar_profile(request):
 @login_required
 @employee_required(allowed_jobs=['kitchen', 'bar', 'manager'])
 def sales_record(request):
+    scope = _scope_branch(request)
     food_orders = FoodOrder.objects.select_related('booking__room', 'booking__user').order_by('-created_at')
     bar_orders = BarOrder.objects.select_related('booking__room', 'booking__user').prefetch_related('items__drink').order_by('-created_at')
+    if scope:
+        food_orders = food_orders.filter(booking__branch=scope)
+        bar_orders = bar_orders.filter(booking__branch=scope)
 
     food_total = food_orders.filter(is_paid=True).aggregate(Sum('total_price'))['total_price__sum'] or 0
     bar_total = bar_orders.filter(is_paid=True).aggregate(Sum('total_price'))['total_price__sum'] or 0
@@ -1840,7 +1903,7 @@ def switch_branch(request, branch_id):
     else:
         branch = get_object_or_404(Branch, id=branch_id)
         request.session['active_branch_id'] = branch.id
-        messages.success(request, f"Switched to {branch.name}. The dashboard, rooms and staff now show this branch.")
+        messages.success(request, f"Switched to {branch.name}. Dashboard, rooms, staff, menu, orders, reports and the hotel name/logo now reflect this branch.")
 
     # Send the user to their dashboard so the branch change is immediately visible.
     if request.user.role == 'admin':
@@ -1854,6 +1917,38 @@ def _active_branch(request):
     if bid:
         return Branch.objects.filter(id=bid).first()
     return None
+
+
+def _default_branch():
+    """The hotel's primary branch — first active one, else the first created."""
+    return (Branch.objects.filter(is_active=True).order_by('id').first()
+            or Branch.objects.order_by('id').first())
+
+
+def _scope_branch(request):
+    """
+    Branch whose OPERATIONAL data the current user should see (None = all branches):
+      - admin / manager -> the branch they switched to (session); None = all
+      - other staff     -> their own assigned branch (None => all, for legacy/unassigned)
+    """
+    user = request.user
+    if not user.is_authenticated:
+        return None
+    if user.role == 'admin':
+        return _active_branch(request)
+    if user.role == 'employee' and hasattr(user, 'employee_profile'):
+        emp = user.employee_profile
+        if emp.job_type == 'manager':
+            return _active_branch(request)
+        return emp.branch
+    return None
+
+
+def _branch_menu_filter(queryset, branch):
+    """Items for the given branch PLUS legacy items with no branch assigned."""
+    if branch is None:
+        return queryset
+    return queryset.filter(Q(branch=branch) | Q(branch__isnull=True))
 
 
 @login_required
