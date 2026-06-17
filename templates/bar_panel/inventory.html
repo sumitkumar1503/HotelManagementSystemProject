@@ -18,7 +18,9 @@
                 <tr>
                     <th class="px-6 py-4">Drink</th>
                     <th class="px-6 py-4">Category</th>
-                    <th class="px-6 py-4">Price</th>
+                    <th class="px-6 py-4">Cost Price</th>
+                    <th class="px-6 py-4">Sale Price</th>
+                    <th class="px-6 py-4">Profit / Unit</th>
                     <th class="px-6 py-4">Stock</th>
                     <th class="px-6 py-4">Status</th>
                     <th class="px-6 py-4 text-right">Actions</th>
@@ -38,7 +40,9 @@
                         </div>
                     </td>
                     <td data-label="Category" class="px-6 py-4 text-sm text-gray-500">{{ drink.get_category_display }}</td>
-                    <td data-label="Price" class="px-6 py-4 font-semibold text-gray-800">{{ site_currency }}{{ drink.price }}</td>
+                    <td data-label="Cost Price" class="px-6 py-4 text-sm text-gray-600">{{ site_currency }}{{ drink.cost_price|floatformat:2 }}</td>
+                    <td data-label="Sale Price" class="px-6 py-4 font-semibold text-gray-800">{{ site_currency }}{{ drink.price|floatformat:2 }}</td>
+                    <td data-label="Profit / Unit" class="px-6 py-4 font-semibold {% if drink.profit_per_unit > 0 %}text-emerald-600{% else %}text-red-600{% endif %}">{{ site_currency }}{{ drink.profit_per_unit|floatformat:2 }}</td>
                     <td data-label="Stock" class="px-6 py-4">
                         <span class="font-bold {% if drink.stock_quantity <= 5 %}text-red-600{% else %}text-gray-800{% endif %}">{{ drink.stock_quantity }}</span>
                     </td>
@@ -58,7 +62,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="6" class="p-10 text-center text-gray-500">No drinks yet. Add your first drink.</td></tr>
+                <tr><td colspan="8" class="p-10 text-center text-gray-500">No drinks yet. Add your first drink.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

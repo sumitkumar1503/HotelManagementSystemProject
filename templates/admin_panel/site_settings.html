@@ -3,17 +3,37 @@
 {% block admin_content %}
 <div class="max-w-2xl mx-auto">
     <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-800">Currency & VAT Settings</h1>
-        <p class="text-gray-500">Change the currency used across the site and the VAT applied to rooms and products.</p>
+        <h1 class="text-3xl font-bold text-gray-800">Hotel, Currency & VAT Settings</h1>
+        <p class="text-gray-500">Edit hotel identity (logo, name, address) shown on the website, dashboard and invoices, plus currency and VAT.</p>
     </div>
 
     <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-        <form method="post" class="space-y-5">
+        <form method="post" enctype="multipart/form-data" class="space-y-5">
             {% csrf_token %}
             {% if form.errors %}<div class="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{{ form.errors }}</div>{% endif %}
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Hotel Name</label>
                 {{ form.hotel_name }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Hotel Logo</label>
+                {% if settings.hotel_logo %}<img src="{{ settings.hotel_logo.url }}" class="h-14 mb-2 rounded border p-1 bg-gray-50">{% endif %}
+                {{ form.hotel_logo }}
+                <p class="text-xs text-gray-400 mt-1">Shown on the website header, dashboards and invoices.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Hotel Address</label>
+                {{ form.hotel_address }}
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Contact Phone</label>
+                    {{ form.hotel_phone }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Contact Email</label>
+                    {{ form.hotel_email }}
+                </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>

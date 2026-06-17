@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.db import transaction
 from .models import (
     Booking, CustomUser, Customer, Employee, FoodItem, PaymentSetting, PaymentReceipt,
-    Branch, Drink, Message, SiteSetting,
+    Branch, Drink, Message, SiteSetting, Expense,
 )
 
 
@@ -249,10 +249,15 @@ class PaymentReceiptForm(forms.ModelForm):
 class DrinkForm(forms.ModelForm):
     class Meta:
         model = Drink
-        fields = ['name', 'category', 'price', 'image', 'stock_quantity', 'is_available', 'branch']
+        fields = ['name', 'category', 'cost_price', 'price', 'image', 'stock_quantity', 'is_available', 'branch']
+        labels = {
+            'cost_price': 'Cost Price (what you pay)',
+            'price': 'Sale Price (shown to guest)',
+        }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
+            'cost_price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
             'price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
             'image': forms.FileInput(attrs={'class': 'form-input'}),
             'stock_quantity': forms.NumberInput(attrs={'class': 'form-input'}),
@@ -282,11 +287,35 @@ class BranchForm(forms.ModelForm):
 
 
 class MessageForm(forms.Form):
-    """Compose a message addressed to a whole department/role."""
+    """Compose a message to a department/group, a specific person, or everyone."""
+    TARGET_DEPARTMENT = 'department'
+    TARGET_INDIVIDUAL = 'individual'
+    TARGET_EVERYONE = 'everyone'
+
+    TARGET_CHOICES = [
+        (TARGET_DEPARTMENT, 'A department / group'),
+        (TARGET_INDIVIDUAL, 'A specific person'),
+        (TARGET_EVERYONE, 'Everyone (all guests & staff)'),
+    ]
+
+    target_type = forms.ChoiceField(
+        choices=TARGET_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'target-type-radio'}),
+        initial=TARGET_DEPARTMENT,
+        required=False,
+    )
     department = forms.ChoiceField(
         choices=Message.DEPARTMENT_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select'}),
-        label="Send to",
+        label="Send to department / group",
+        required=False,
+    )
+    recipient = forms.ModelChoiceField(
+        queryset=CustomUser.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Send to person",
+        required=False,
+        empty_label="Select a person...",
     )
     subject = forms.CharField(
         required=False,
@@ -296,22 +325,97 @@ class MessageForm(forms.Form):
         widget=forms.Textarea(attrs={'class': 'form-input', 'rows': 5, 'placeholder': 'Type your message...'}),
     )
 
-    def __init__(self, *args, exclude_department=None, **kwargs):
+    def __init__(self, *args, user=None, privileged=False, exclude_department=None, **kwargs):
         super().__init__(*args, **kwargs)
-        # Don't let staff message their own department (they're in it).
+        self.privileged = privileged
+
+        # Department choices: drop the sender's own department; guests-as-target
+        # is only for privileged senders (admin / manager / receptionist).
+        dept_choices = list(Message.DEPARTMENT_CHOICES)
         if exclude_department:
-            self.fields['department'].choices = [
-                c for c in Message.DEPARTMENT_CHOICES if c[0] != exclude_department
-            ]
+            dept_choices = [c for c in dept_choices if c[0] != exclude_department]
+        if not privileged:
+            dept_choices = [c for c in dept_choices if c[0] != 'guest']
+        self.fields['department'].choices = dept_choices
+
+        if privileged:
+            recipients = CustomUser.objects.filter(is_active=True).select_related('employee_profile')
+            if user is not None:
+                recipients = recipients.exclude(id=user.id)
+            self.fields['recipient'].queryset = recipients.order_by('role', 'first_name', 'username')
+            self.fields['recipient'].label_from_instance = self._person_label
+        else:
+            # Non-privileged users can only message a department/group.
+            self.fields.pop('target_type')
+            self.fields.pop('recipient')
+
+    @staticmethod
+    def _person_label(u):
+        name = u.get_full_name() or u.username
+        if u.role == 'employee' and hasattr(u, 'employee_profile'):
+            return f"{name} - {u.employee_profile.get_job_type_display()}"
+        return f"{name} - {u.get_role_display()}"
+
+    def clean(self):
+        cleaned = super().clean()
+        target = cleaned.get('target_type') or self.TARGET_DEPARTMENT
+        if target == self.TARGET_INDIVIDUAL and not cleaned.get('recipient'):
+            self.add_error('recipient', "Please choose the person to message.")
+        if target == self.TARGET_DEPARTMENT and not cleaned.get('department'):
+            self.add_error('department', "Please choose a department or group.")
+        cleaned['target_type'] = target
+        return cleaned
 
 
 class SiteSettingForm(forms.ModelForm):
     class Meta:
         model = SiteSetting
-        fields = ['hotel_name', 'currency_symbol', 'currency_code', 'vat_percentage']
+        fields = ['hotel_name', 'hotel_logo', 'hotel_address', 'hotel_phone', 'hotel_email',
+                  'currency_symbol', 'currency_code', 'vat_percentage']
+        labels = {
+            'hotel_logo': 'Hotel Logo',
+            'hotel_address': 'Hotel Address',
+            'hotel_phone': 'Contact Phone',
+            'hotel_email': 'Contact Email',
+        }
         widgets = {
             'hotel_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'hotel_logo': forms.FileInput(attrs={'class': 'form-input'}),
+            'hotel_address': forms.Textarea(attrs={'class': 'form-input', 'rows': 2}),
+            'hotel_phone': forms.TextInput(attrs={'class': 'form-input'}),
+            'hotel_email': forms.EmailInput(attrs={'class': 'form-input'}),
             'currency_symbol': forms.TextInput(attrs={'class': 'form-input', 'placeholder': '$, €, ₹, £...'}),
             'currency_code': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'USD, EUR, INR...'}),
             'vat_percentage': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
         }
+
+
+class ExpenseForm(forms.ModelForm):
+    class Meta:
+        model = Expense
+        fields = ['title', 'category', 'amount', 'spent_on', 'branch', 'note']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. June electricity bill'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01', 'placeholder': '0.00'}),
+            'spent_on': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'branch': forms.Select(attrs={'class': 'form-select'}),
+            'note': forms.Textarea(attrs={'class': 'form-input', 'rows': 2, 'placeholder': 'Optional details'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['branch'].required = False
+        self.fields['branch'].empty_label = "All / No specific branch"
+
+
+class WalletCreditForm(forms.Form):
+    """Admin/Manager adds reward credit to a guest's wallet."""
+    amount = forms.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0.01,
+        widget=forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01', 'placeholder': '0.00'}),
+    )
+    reason = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Loyalty reward'}),
+    )

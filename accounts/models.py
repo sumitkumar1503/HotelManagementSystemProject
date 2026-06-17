@@ -342,7 +342,11 @@ class Drink(models.Model):
     ]
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    # `price` is the SALE price shown to guests.
     price = models.DecimalField(max_digits=8, decimal_places=2)
+    # `cost_price` is what the hotel paid (used only for profit calculations).
+    cost_price = models.DecimalField(max_digits=8, decimal_places=2, default=0.00,
+                                     help_text="Purchase/cost price used for profit calculation.")
     image = models.ImageField(upload_to='drink_images/', blank=True, null=True)
     stock_quantity = models.PositiveIntegerField(default=0)
     is_available = models.BooleanField(default=True)
@@ -354,6 +358,10 @@ class Drink(models.Model):
     @property
     def in_stock(self):
         return self.stock_quantity > 0
+
+    @property
+    def profit_per_unit(self):
+        return (self.price or 0) - (self.cost_price or 0)
 
 
 class BarOrder(models.Model):
@@ -415,6 +423,7 @@ class Message(models.Model):
         ('housekeeping', 'Housekeeping'),
         ('manager', 'Manager'),
         ('admin', 'Admin / Front Office'),
+        ('guest', 'Guests'),
     ]
 
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages')
@@ -444,6 +453,11 @@ class Message(models.Model):
 # ---------------------------------------------------------------------------
 class SiteSetting(models.Model):
     hotel_name = models.CharField(max_length=100, default="Grand Hotel")
+    hotel_logo = models.ImageField(upload_to='hotel/', blank=True, null=True,
+                                   help_text="Logo shown on the website, dashboard and invoices.")
+    hotel_address = models.TextField(blank=True, default="123 Luxury Ave, Hotel City")
+    hotel_phone = models.CharField(max_length=30, blank=True, default="")
+    hotel_email = models.EmailField(blank=True, default="contact@grandhotel.com")
     currency_symbol = models.CharField(max_length=5, default="$")
     currency_code = models.CharField(max_length=5, default="USD")
     vat_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00,
@@ -465,3 +479,34 @@ class SiteSetting(models.Model):
     def load(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+# ---------------------------------------------------------------------------
+# EXPENSES (Admin + Manager) — salaries, repairs, bills, etc.
+# ---------------------------------------------------------------------------
+class Expense(models.Model):
+    CATEGORY_CHOICES = [
+        ('salary', 'Staff Salaries'),
+        ('repairs', 'Hotel Repairs / Maintenance'),
+        ('electricity', 'Electricity Bill'),
+        ('water', 'Water Bill'),
+        ('supplies', 'Supplies / Inventory Purchase'),
+        ('marketing', 'Marketing'),
+        ('rent', 'Rent / Lease'),
+        ('other', 'Other'),
+    ]
+
+    title = models.CharField(max_length=150)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    spent_on = models.DateField()
+    note = models.TextField(blank=True)
+    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='expenses')
+    recorded_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='expenses')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-spent_on', '-id']
+
+    def __str__(self):
+        return f"{self.get_category_display()} - {self.amount} ({self.spent_on})"

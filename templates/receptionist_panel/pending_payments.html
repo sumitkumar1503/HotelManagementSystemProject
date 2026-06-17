@@ -42,7 +42,7 @@
                             <span class="text-xs text-gray-400">#{{ receipt.booking.id }} &middot; {{ receipt.booking.check_in|date:"M d" }} → {{ receipt.booking.check_out|date:"M d" }}</span>
                         </td>
                         <td data-label="Amount" class="p-4 font-bold text-gray-800">
-                            {{ site_currency }}{{ receipt.amount }}
+                            {{ site_currency }}{{ receipt.amount|floatformat:2 }}
                             {% if receipt.note %}<p class="text-xs text-gray-400 font-normal">{{ receipt.note }}</p>{% endif %}
                         </td>
                         <td data-label="Receipt" class="p-4">

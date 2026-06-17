@@ -48,7 +48,7 @@
             <div class="p-5">
                 <div class="flex justify-between items-start mb-2">
                     <h3 class="text-lg font-bold text-gray-800">{{ room.get_room_type_display }}</h3>
-                    <span class="text-blue-600 font-bold">{{ site_currency }}{{ room.price_per_night }}<span class="text-gray-400 text-xs font-normal">/night</span></span>
+                    <span class="text-blue-600 font-bold">{{ site_currency }}{{ room.price_per_night|floatformat:2 }}<span class="text-gray-400 text-xs font-normal">/night</span></span>
                 </div>
                 
                 <p class="text-gray-500 text-sm mb-4 line-clamp-2">{{ room.description|default:"No description available." }}</p>

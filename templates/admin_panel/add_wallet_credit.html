@@ -1,0 +1,48 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Add Wallet Credit{% endblock %}
+{% block panel_content %}
+<div class="max-w-lg mx-auto">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Add Wallet Credit</h1>
+        <p class="text-gray-500">Reward a loyal guest with credit they can use on their next stay.</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6 flex items-center gap-4">
+        {% if guest.user.profile_picture %}
+            <img src="{{ guest.user.profile_picture.url }}" class="w-14 h-14 rounded-full object-cover border">
+        {% else %}
+            <div class="w-14 h-14 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xl">{{ guest.user.first_name|first }}</div>
+        {% endif %}
+        <div>
+            <p class="font-bold text-gray-800">{{ guest.user.get_full_name|default:guest.user.username }}</p>
+            <p class="text-sm text-gray-500">Current balance: <span class="font-bold text-emerald-600">{{ site_currency }}{{ wallet.balance|floatformat:2 }}</span></p>
+        </div>
+    </div>
+
+    <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+            {% if form.errors %}<div class="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{{ form.errors }}</div>{% endif %}
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Amount to add ({{ site_currency }})</label>
+                {{ form.amount }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Reason (optional)</label>
+                {{ form.reason }}
+            </div>
+            <div class="pt-4 border-t flex gap-3">
+                <button type="submit" class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-md transition">
+                    <i data-lucide="plus-circle" class="w-4 h-4 inline mr-1"></i> Add Credit
+                </button>
+                <a href="{% url 'view_guests' %}" class="flex-1 text-center py-3 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+<style>
+    .form-input, .form-select { width: 100%; padding: 10px 15px; border: 1px solid #e5e7eb; border-radius: 8px; outline: none; color: #374151; }
+    .form-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+</style>
+<script>lucide.createIcons();</script>
+{% endblock %}

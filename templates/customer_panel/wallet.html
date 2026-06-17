@@ -9,7 +9,7 @@
             <i data-lucide="wallet" class="w-5 h-5"></i>
             <span class="text-xs font-bold uppercase tracking-widest">Available Credit</span>
         </div>
-        <p class="text-5xl font-black">{{ site_currency }}{{ wallet.balance }}</p>
+        <p class="text-5xl font-black">{{ site_currency }}{{ wallet.balance|floatformat:2 }}</p>
         <p class="text-indigo-200 text-sm mt-2">Refunds from cancelled bookings are credited here.</p>
     </div>
 
@@ -37,7 +37,7 @@
                     <td data-label="Reason" class="px-6 py-4 text-sm text-gray-600">{{ txn.reason }}</td>
                     <td data-label="Date" class="px-6 py-4 text-sm text-gray-500">{{ txn.created_at|date:"M d, Y H:i" }}</td>
                     <td data-label="Amount" class="px-6 py-4 text-right font-bold {% if txn.txn_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
-                        {% if txn.txn_type == 'credit' %}+{% else %}-{% endif %}{{ site_currency }}{{ txn.amount }}
+                        {% if txn.txn_type == 'credit' %}+{% else %}-{% endif %}{{ site_currency }}{{ txn.amount|floatformat:2 }}
                     </td>
                 </tr>
                 {% empty %}

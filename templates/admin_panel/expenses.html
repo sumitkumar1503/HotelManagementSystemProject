@@ -1,0 +1,60 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Expenses{% endblock %}
+{% block panel_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Expenses</h1>
+            <p class="text-gray-500">Record salaries, repairs, electricity bills and other costs.
+            {% if active_branch %}<span class="font-semibold text-emerald-600">· {{ active_branch.name }}</span>{% endif %}</p>
+        </div>
+        <a href="{% url 'add_expense' %}" class="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow transition flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Record Expense
+        </a>
+    </div>
+
+    <div class="bg-gradient-to-r from-rose-500 to-red-500 text-white rounded-2xl shadow-lg p-6 mb-6">
+        <p class="text-xs uppercase tracking-widest text-rose-100 font-bold">Total Expenses (shown)</p>
+        <p class="text-3xl font-black mt-1">{{ site_currency }}{{ total_expenses|floatformat:2 }}</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-x-auto">
+        <table class="rtable w-full text-left min-w-[640px]">
+            <thead class="bg-gray-50 text-gray-600 text-xs uppercase font-semibold border-b">
+                <tr>
+                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4">Title</th>
+                    <th class="px-6 py-4">Category</th>
+                    <th class="px-6 py-4">Branch</th>
+                    <th class="px-6 py-4">Amount</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for e in expenses %}
+                <tr class="hover:bg-rose-50/40 transition">
+                    <td data-label="Date" class="px-6 py-4 text-sm text-gray-500">{{ e.spent_on|date:"M d, Y" }}</td>
+                    <td data-label="Title" class="px-6 py-4 font-semibold text-gray-800">{{ e.title }}</td>
+                    <td data-label="Category" class="px-6 py-4 text-sm text-gray-600">{{ e.get_category_display }}</td>
+                    <td data-label="Branch" class="px-6 py-4 text-sm text-gray-500">{{ e.branch.name|default:"—" }}</td>
+                    <td data-label="Amount" class="px-6 py-4 font-bold text-rose-600">{{ site_currency }}{{ e.amount|floatformat:2 }}</td>
+                    <td class="rtable-actions px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url 'edit_expense' e.id %}" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</a>
+                            <a href="{% url 'delete_expense' e.id %}" onclick="return confirm('Delete this expense?');" class="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100">Delete</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="p-10 text-center text-gray-500">
+                    <i data-lucide="receipt" class="w-10 h-10 mx-auto text-gray-300 mb-2"></i>
+                    No expenses recorded yet.
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'common/_pagination.html' %}
+</div>
+<script>lucide.createIcons();</script>
+{% endblock %}

@@ -7,15 +7,15 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <p class="text-gray-400 text-xs font-bold uppercase">Food Sales (Paid)</p>
-            <h3 class="text-2xl font-black text-gray-800">{{ site_currency }}{{ food_total }}</h3>
+            <h3 class="text-2xl font-black text-gray-800">{{ site_currency }}{{ food_total|floatformat:2 }}</h3>
         </div>
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <p class="text-gray-400 text-xs font-bold uppercase">Bar Sales (Paid)</p>
-            <h3 class="text-2xl font-black text-gray-800">{{ site_currency }}{{ bar_total }}</h3>
+            <h3 class="text-2xl font-black text-gray-800">{{ site_currency }}{{ bar_total|floatformat:2 }}</h3>
         </div>
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <p class="text-gray-400 text-xs font-bold uppercase">Total Revenue</p>
-            <h3 class="text-2xl font-black text-orange-600">{{ site_currency }}{{ grand_total }}</h3>
+            <h3 class="text-2xl font-black text-orange-600">{{ site_currency }}{{ grand_total|floatformat:2 }}</h3>
             <p class="text-xs text-gray-500">{{ pending_count }} unpaid order(s)</p>
         </div>
     </div>
@@ -40,7 +40,7 @@
                     <td data-label="Order" class="px-6 py-4 font-bold">#{{ order.id }}</td>
                     <td data-label="Room" class="px-6 py-4">{{ order.booking.room.room_number }}</td>
                     <td data-label="Items" class="px-6 py-4 text-sm text-gray-600">{% for item in order.items.all %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
-                    <td data-label="Total" class="px-6 py-4 font-semibold">{{ site_currency }}{{ order.total_price }}</td>
+                    <td data-label="Total" class="px-6 py-4 font-semibold">{{ site_currency }}{{ order.total_price|floatformat:2 }}</td>
                     <td data-label="Status" class="px-6 py-4 text-sm">{{ order.get_status_display }}</td>
                     <td data-label="Payment" class="px-6 py-4 text-right">
                         {% if order.is_paid %}
@@ -77,7 +77,7 @@
                     <td data-label="Order" class="px-6 py-4 font-bold">#{{ order.id }}</td>
                     <td data-label="Room" class="px-6 py-4">{{ order.booking.room.room_number }}</td>
                     <td data-label="Items" class="px-6 py-4 text-sm text-gray-600">{% for item in order.items.all %}{{ item.quantity }}x {{ item.drink.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
-                    <td data-label="Total" class="px-6 py-4 font-semibold">{{ site_currency }}{{ order.total_price }}</td>
+                    <td data-label="Total" class="px-6 py-4 font-semibold">{{ site_currency }}{{ order.total_price|floatformat:2 }}</td>
                     <td data-label="Status" class="px-6 py-4 text-sm">{{ order.get_status_display }}</td>
                     <td data-label="Payment" class="px-6 py-4 text-right">
                         {% if order.is_paid %}

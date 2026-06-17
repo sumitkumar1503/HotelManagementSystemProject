@@ -8,11 +8,37 @@
         <form method="post" class="space-y-5">
             {% csrf_token %}
             {% if form.errors %}<div class="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{{ form.errors }}</div>{% endif %}
+
+            {% if privileged %}
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Send to department</label>
-                {{ form.department }}
-                <p class="text-xs text-gray-400 mt-1">Everyone in the selected department will receive this message.</p>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Who should receive this?</label>
+                <div class="space-y-2" id="target-type-group">
+                    {% for radio in form.target_type %}
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            {{ radio.tag }} <span>{{ radio.choice_label }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
             </div>
+            {% endif %}
+
+            <div data-target-block="department">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Send to department / group</label>
+                {{ form.department }}
+                <p class="text-xs text-gray-400 mt-1">Everyone in the selected department / group (e.g. all Bar staff, or all Guests) will receive this message.</p>
+            </div>
+
+            {% if privileged %}
+            <div data-target-block="individual">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Send to a specific person</label>
+                {{ form.recipient }}
+                <p class="text-xs text-gray-400 mt-1">Pick any single guest or staff member.</p>
+            </div>
+            <div data-target-block="everyone" class="p-3 bg-amber-50 text-amber-700 rounded-lg text-sm">
+                <i data-lucide="users" class="w-4 h-4 inline mr-1"></i> This message will be delivered to <strong>every guest and staff member</strong>.
+            </div>
+            {% endif %}
+
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
                 {{ form.subject }}
@@ -30,5 +56,25 @@
         </form>
     </div>
 </div>
-<script>lucide.createIcons();</script>
+<script>
+    lucide.createIcons();
+    (function () {
+        const group = document.getElementById('target-type-group');
+        const blocks = {
+            department: document.querySelector('[data-target-block="department"]'),
+            individual: document.querySelector('[data-target-block="individual"]'),
+            everyone: document.querySelector('[data-target-block="everyone"]'),
+        };
+        if (!group) return; // non-privileged users only see the department block
+        function refresh() {
+            const sel = group.querySelector('input[type=radio]:checked');
+            const val = sel ? sel.value : 'department';
+            for (const key in blocks) {
+                if (blocks[key]) blocks[key].style.display = (key === val) ? '' : 'none';
+            }
+        }
+        group.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>
 {% endblock %}

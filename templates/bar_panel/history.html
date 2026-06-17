@@ -23,7 +23,7 @@
                     <td data-label="Items" class="px-6 py-4 text-sm text-gray-600">
                         {% for item in order.items.all %}{{ item.quantity }}x {{ item.drink.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
                     </td>
-                    <td data-label="Total" class="px-6 py-4 font-semibold text-fuchsia-600">{{ site_currency }}{{ order.total_price }}</td>
+                    <td data-label="Total" class="px-6 py-4 font-semibold text-fuchsia-600">{{ site_currency }}{{ order.total_price|floatformat:2 }}</td>
                     <td data-label="Paid" class="px-6 py-4">
                         {% if order.is_paid %}<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Paid</span>
                         {% else %}<span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded">Unpaid</span>{% endif %}

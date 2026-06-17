@@ -191,6 +191,18 @@
     <span>Sales Record</span>
 </a>
 
+<!-- Expenses -->
+<a href="{% url 'expense_list' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'expense' in request.resolver_match.url_name %}active{% endif %}">
+    <i data-lucide="trending-down" class="w-5 h-5 mr-4"></i>
+    <span>Expenses</span>
+</a>
+
+<!-- Accounting & Report -->
+<a href="{% url 'accounting_report' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'accounting_report' %}active{% endif %}">
+    <i data-lucide="bar-chart-3" class="w-5 h-5 mr-4"></i>
+    <span>Accounting &amp; Report</span>
+</a>
+
 <!-- Branches -->
 <a href="{% url 'manage_branches' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'branch' in request.resolver_match.url_name %}active{% endif %}">
     <i data-lucide="git-branch" class="w-5 h-5 mr-4"></i>
@@ -248,9 +260,10 @@
       </div>
       
       <!-- Center: Search -->
-      <div class="hidden md:flex items-center flex-1 mx-6 search-box">
-        <input type="text" placeholder="Search rooms, staff, guests..." class="w-full text-gray-800">
-      </div>
+      <form action="{% url 'global_search' %}" method="get" class="hidden md:flex items-center flex-1 mx-6 search-box">
+        <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Search rooms, staff, guests..." class="w-full text-gray-800">
+        <button type="submit" class="ml-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-full hover:bg-blue-700">Search</button>
+      </form>
       
       <!-- Right: Notifications & Profile -->
       <div class="flex items-center space-x-4">

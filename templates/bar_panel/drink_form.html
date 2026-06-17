@@ -11,13 +11,17 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Name</label>
                 {{ form.name }}
             </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Category</label>
+                {{ form.category }}
+            </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Category</label>
-                    {{ form.category }}
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Cost Price <span class="text-gray-400 font-normal">(what you pay)</span></label>
+                    {{ form.cost_price }}
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Price</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Sale Price <span class="text-gray-400 font-normal">(shown to guest)</span></label>
                     {{ form.price }}
                 </div>
             </div>

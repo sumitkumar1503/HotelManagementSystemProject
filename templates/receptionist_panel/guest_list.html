@@ -13,7 +13,7 @@
                         <th class="px-6 py-4">Guest Name</th>
                         <th class="px-6 py-4">Contact</th>
                         <th class="px-6 py-4">Email</th>
-                        <th class="px-6 py-4">Address</th>
+                        <th class="px-6 py-4">Wallet Balance</th>
                         <th class="px-6 py-4">Joined</th>
                     </tr>
                 </thead>
@@ -34,8 +34,10 @@
                         <td data-label="Email" class="px-6 py-4 text-sm text-gray-600">
                             {{ guest.user.email|default:"-" }}
                         </td>
-                        <td data-label="Address" class="px-6 py-4 text-sm text-gray-600 md:truncate md:max-w-xs">
-                            {{ guest.address|default:"Walk-in" }}
+                        <td data-label="Wallet Balance" class="px-6 py-4">
+                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-full text-sm">
+                                <i data-lucide="wallet" class="w-3.5 h-3.5"></i> {{ site_currency }}{{ guest.wallet_balance|floatformat:2 }}
+                            </span>
                         </td>
                         <td data-label="Joined" class="px-6 py-4 text-sm text-gray-500">
                             {{ guest.user.date_joined|date:"M d, Y" }}

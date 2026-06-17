@@ -38,7 +38,7 @@
                         </div>
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
                             <span class="text-xs text-gray-400 uppercase font-bold block mb-1">Salary</span>
-                            <span class="text-gray-800 font-semibold">{{ site_currency }}{{ employee.salary }}</span>
+                            <span class="text-gray-800 font-semibold">{{ site_currency }}{{ employee.salary|floatformat:2 }}</span>
                         </div>
                     </div>
                 </div>

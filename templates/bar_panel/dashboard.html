@@ -37,13 +37,13 @@
                     {% for item in order.items.all %}
                     <div class="flex justify-between items-center text-sm">
                         <span class="text-gray-700 font-medium">{{ item.quantity }}x {{ item.drink.name }}</span>
-                        <span class="text-gray-500">{{ site_currency }}{{ item.subtotal }}</span>
+                        <span class="text-gray-500">{{ site_currency }}{{ item.subtotal|floatformat:2 }}</span>
                     </div>
                     {% endfor %}
                 </div>
                 <div class="flex justify-between items-center mb-4">
                     <span class="text-sm text-gray-500">Total</span>
-                    <span class="font-bold text-fuchsia-600">{{ site_currency }}{{ order.total_price }}</span>
+                    <span class="font-bold text-fuchsia-600">{{ site_currency }}{{ order.total_price|floatformat:2 }}</span>
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="px-3 py-1 rounded-full text-xs font-bold uppercase

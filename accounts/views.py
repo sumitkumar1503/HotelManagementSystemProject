@@ -8,18 +8,20 @@ from django.contrib.auth.hashers import make_password
 from accounts.models import (
     Booking, CleaningLog, CustomUser, Customer, Employee, FoodItem, FoodOrder, Room,
     PaymentSetting, PaymentReceipt, Branch, Wallet, WalletTransaction,
-    Drink, BarOrder, BarOrderItem, StockTransaction, Message, SiteSetting,
+    Drink, BarOrder, BarOrderItem, StockTransaction, Message, SiteSetting, Expense,
 )
 from .forms import (
     BookingForm, CustomerEditForm, CustomerSignUpForm, EmployeeCreationForm, EmployeeEditForm,
     FoodItemForm, RoomForm, WalkInBookingForm, PaymentSettingForm, PaymentReceiptForm,
-    DrinkForm, RestockForm, BranchForm, MessageForm, SiteSettingForm,
+    DrinkForm, RestockForm, BranchForm, MessageForm, SiteSettingForm, ExpenseForm, WalletCreditForm,
 )
+from django.db.models import Q
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models.functions import TruncMonth, TruncDay 
 from .decorators import admin_required, customer_required, employee_required
 from datetime import timedelta, date
+from decimal import Decimal, ROUND_HALF_UP
 # --- COMMON VIEWS ---
 
 
@@ -28,14 +30,64 @@ def paginate(request, queryset, per_page=10):
     return Paginator(queryset, per_page).get_page(request.GET.get('page'))
 
 
+# ---------------------------------------------------------------------------
+# ROOM AVAILABILITY (date-range based, rooms stay listed even when booked)
+# ---------------------------------------------------------------------------
+def room_active_bookings(room):
+    """Reservations that still block dates: not cancelled, not checked out, ending today or later."""
+    today = timezone.now().date()
+    return Booking.objects.filter(
+        room=room, is_cancelled=False, actual_check_out__isnull=True, check_out__gte=today,
+    ).order_by('check_in')
+
+
+def room_is_available(room, check_in, check_out, exclude_booking_id=None):
+    """True if the room is free for the whole [check_in, check_out) range."""
+    if room.room_status == 'maintenance':
+        return False
+    qs = Booking.objects.filter(
+        room=room, is_cancelled=False, actual_check_out__isnull=True,
+        check_in__lt=check_out, check_out__gt=check_in,
+    )
+    if exclude_booking_id:
+        qs = qs.exclude(id=exclude_booking_id)
+    return not qs.exists()
+
+
+def room_next_available_date(room):
+    """Earliest date (>= today) the room is free, skipping past current/overlapping reservations."""
+    today = timezone.now().date()
+    bookings = list(room_active_bookings(room))
+    if not bookings:
+        return today
+    candidate = today
+    changed = True
+    while changed:
+        changed = False
+        for b in bookings:
+            if b.check_in <= candidate < b.check_out:
+                candidate = b.check_out
+                changed = True
+    return candidate
+
+
+def _annotate_room_availability(rooms):
+    """Attach booked_ranges + next_available to each room for the listings."""
+    rooms = list(rooms)
+    for room in rooms:
+        room.booked_ranges = list(room_active_bookings(room))
+        room.next_available = room_next_available_date(room)
+    return rooms
+
+
 def index(request):
-    # Fetch top 3 available rooms for the homepage
-    featured_rooms = Room.objects.filter(room_status='available')[:3]
+    # Feature a few rooms on the homepage (booked rooms stay listed, only hide maintenance).
+    featured_rooms = _annotate_room_availability(Room.objects.exclude(room_status='maintenance')[:3])
     return render(request, 'common/home.html', {'featured_rooms': featured_rooms})
 
 def room_list(request):
-    # View for "All Rooms" page
-    rooms = Room.objects.filter(room_status='available')
+    # All bookable rooms stay visible even if reserved for some dates (only hide maintenance).
+    rooms = _annotate_room_availability(Room.objects.exclude(room_status='maintenance').order_by('room_number'))
     # Logged-in guests keep their dashboard sidebar while browsing rooms.
     if request.user.is_authenticated and request.user.role == 'customer':
         return render(request, 'customer_panel/browse_rooms.html', {'rooms': rooms})
@@ -53,32 +105,44 @@ def book_room_placeholder(request, room_id):
 @login_required
 def book_room(request, room_id):
     room = get_object_or_404(Room, id=room_id)
-    
-    # 1. Safety Check: Is it actually available?
-    if room.room_status != 'available':
-        messages.error(request, "Sorry, this room is currently unavailable.")
+
+    # Rooms under maintenance can't be booked at all.
+    if room.room_status == 'maintenance':
+        messages.error(request, "Sorry, this room is currently under maintenance.")
         return redirect('room_list')
 
     if request.method == 'POST':
         form = BookingForm(request.POST)
         if form.is_valid():
-            # 2. Create the Booking Record
-            booking = form.save(commit=False)
-            booking.user = request.user
-            booking.room = room
-            booking.save()
-            
-            # 3. LOCK THE ROOM (Make it unavailable for others)
-            room.room_status = 'occupied' 
-            room.save()
-            
-            messages.success(request, f"Room {room.room_number} reserved! Please complete your payment to confirm the booking.")
-            # Send the guest straight to the payment / receipt-upload page.
-            return redirect('pay_booking', booking_id=booking.id)
+            check_in = form.cleaned_data['check_in']
+            check_out = form.cleaned_data['check_out']
+
+            # Date-range availability: the room stays listed, but the chosen
+            # dates must not overlap an existing reservation.
+            if not room_is_available(room, check_in, check_out):
+                next_date = room_next_available_date(room)
+                messages.error(
+                    request,
+                    f"Room {room.room_number} is already reserved for those dates. "
+                    f"The next available date is {next_date:%b %d, %Y}. Please choose dates from then on."
+                )
+            else:
+                booking = form.save(commit=False)
+                booking.user = request.user
+                booking.room = room
+                booking.branch = room.branch
+                booking.save()
+                messages.success(request, f"Room {room.room_number} reserved! Please complete your payment to confirm the booking.")
+                return redirect('pay_booking', booking_id=booking.id)
     else:
         form = BookingForm()
-    
-    return render(request, 'customer_panel/booking_form.html', {'room': room, 'form': form})
+
+    return render(request, 'customer_panel/booking_form.html', {
+        'room': room,
+        'form': form,
+        'booked_ranges': list(room_active_bookings(room)),
+        'next_available': room_next_available_date(room),
+    })
 
 
 
@@ -141,22 +205,30 @@ from django.db.models import Count, Sum
 @login_required
 @admin_required
 def admin_dashboard(request):
+    # Scope everything to the active branch when one is selected.
+    active = _active_branch(request)
+    bookings_qs = Booking.objects.all()
+    rooms_qs = Room.objects.all()
+    if active:
+        bookings_qs = bookings_qs.filter(branch=active)
+        rooms_qs = rooms_qs.filter(branch=active)
+
     # 1. KPI CARDS DATA
-    total_revenue = Booking.objects.filter(is_paid=True).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    total_bookings = Booking.objects.count()
-    active_guests = Booking.objects.filter(actual_check_in__isnull=False, actual_check_out__isnull=True).count()
+    total_revenue = bookings_qs.filter(is_paid=True).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    total_bookings = bookings_qs.count()
+    active_guests = bookings_qs.filter(actual_check_in__isnull=False, actual_check_out__isnull=True).count()
     
     # Calculate Occupancy Rate
-    total_rooms = Room.objects.count()
+    total_rooms = rooms_qs.count()
     occupancy_rate = 0
     if total_rooms > 0:
-        occupied_rooms = Room.objects.filter(room_status='occupied').count()
+        occupied_rooms = rooms_qs.filter(room_status='occupied').count()
         occupancy_rate = int((occupied_rooms / total_rooms) * 100)
 
     # 2. CHART DATA: Revenue Trend (Last 7 Days)
     # Using Daily data is much easier to generate for demos than Monthly
     last_7_days = timezone.now() - timedelta(days=7)
-    daily_data = Booking.objects.filter(is_paid=True, created_at__gte=last_7_days)\
+    daily_data = bookings_qs.filter(is_paid=True, created_at__gte=last_7_days)\
         .annotate(day=TruncDay('created_at'))\
         .values('day')\
         .annotate(revenue=Sum('total_amount'))\
@@ -177,7 +249,7 @@ def admin_dashboard(request):
     #     chart_revenue = [120, 190, 150, 250, 210, 320, 280] 
 
     # 3. CHART DATA: Room Type Popularity
-    room_stats = Booking.objects.values('room__room_type')\
+    room_stats = bookings_qs.values('room__room_type')\
         .annotate(count=Count('id'))\
         .order_by('-count')
     
@@ -200,12 +272,14 @@ def admin_dashboard(request):
         'chart_revenue': json.dumps(chart_revenue),
         'chart_room_labels': json.dumps(room_labels),
         'chart_room_counts': json.dumps(room_counts),
+        'active_branch': active,
     }
     return render(request, 'admin_panel/dashboard.html', context)
 
 @login_required
 @admin_required
 def add_employee(request):
+    active = _active_branch(request)
     if request.method == 'POST':
         form = EmployeeCreationForm(request.POST, request.FILES)
         if form.is_valid():
@@ -216,18 +290,22 @@ def add_employee(request):
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = EmployeeCreationForm()
+        # Default the new staff member to the branch currently being managed.
+        form = EmployeeCreationForm(initial={'branch': active} if active else None)
     
-    return render(request, 'admin_panel/add_employee.html', {'form': form})
+    return render(request, 'admin_panel/add_employee.html', {'form': form, 'active_branch': active})
 
 
 @login_required
 @admin_required
 def view_employees(request):
+    active = _active_branch(request)
     # Fetch all users who have an employee profile
     employees = Employee.objects.select_related('user').all().order_by('-id')
+    if active:
+        employees = employees.filter(branch=active)
     page_obj = paginate(request, employees)
-    return render(request, 'admin_panel/view_employees.html', {'employees': page_obj, 'page_obj': page_obj})
+    return render(request, 'admin_panel/view_employees.html', {'employees': page_obj, 'page_obj': page_obj, 'active_branch': active})
 
 @login_required
 @admin_required
@@ -264,22 +342,30 @@ def delete_employee(request, employee_id):
 @login_required
 @admin_required
 def view_rooms(request):
+    active = _active_branch(request)
     rooms = Room.objects.all().order_by('room_number')
+    if active:
+        rooms = rooms.filter(branch=active)
     page_obj = paginate(request, rooms)
-    return render(request, 'admin_panel/view_rooms.html', {'rooms': page_obj, 'page_obj': page_obj})
+    return render(request, 'admin_panel/view_rooms.html', {'rooms': page_obj, 'page_obj': page_obj, 'active_branch': active})
 
 @login_required
 @admin_required
 def add_room(request):
+    active = _active_branch(request)
     if request.method == 'POST':
         form = RoomForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            room = form.save(commit=False)
+            # New rooms belong to the branch currently being managed.
+            if active and not room.branch_id:
+                room.branch = active
+            room.save()
             messages.success(request, "New room added successfully!")
             return redirect('view_rooms')
     else:
         form = RoomForm()
-    return render(request, 'admin_panel/add_room.html', {'form': form, 'title': 'Add New Room'})
+    return render(request, 'admin_panel/add_room.html', {'form': form, 'title': 'Add New Room', 'active_branch': active})
 
 @login_required
 @admin_required
@@ -306,12 +392,72 @@ def delete_room(request, room_id):
 
 
 
+def _can_manage_wallet(user):
+    """Admin and Manager can add credit to guest wallets."""
+    if user.role == 'admin':
+        return True
+    if user.role == 'employee' and hasattr(user, 'employee_profile'):
+        return user.employee_profile.job_type == 'manager'
+    return False
+
+
+def _attach_wallet_balances(customers):
+    """Attach a `wallet_balance` attribute to each Customer for display."""
+    customers = list(customers)
+    user_ids = [c.user_id for c in customers]
+    balances = {w.user_id: w.balance for w in Wallet.objects.filter(user_id__in=user_ids)}
+    for c in customers:
+        c.wallet_balance = balances.get(c.user_id, Decimal('0.00'))
+    return customers
+
+
 @login_required
-@admin_required
 def view_guests(request):
+    # Admin, Manager and Receptionist may view guests (and their wallet balance).
+    if not (request.user.role == 'admin' or
+            (request.user.role == 'employee' and hasattr(request.user, 'employee_profile')
+             and request.user.employee_profile.job_type in ('manager', 'receptionist'))):
+        return redirect('home')
+
     guests = Customer.objects.select_related('user').all().order_by('-id')
     page_obj = paginate(request, guests)
-    return render(request, 'admin_panel/view_guests.html', {'guests': page_obj, 'page_obj': page_obj})
+    _attach_wallet_balances(page_obj.object_list)
+    return render(request, 'admin_panel/view_guests.html', {
+        'guests': page_obj,
+        'page_obj': page_obj,
+        'can_add_credit': _can_manage_wallet(request.user),
+        'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def add_wallet_credit(request, guest_id):
+    """Admin / Manager add reward credit to a guest's wallet."""
+    if not _can_manage_wallet(request.user):
+        messages.error(request, "Only Admins and Managers can add wallet credit.")
+        return redirect('home')
+
+    guest = get_object_or_404(Customer, id=guest_id)
+    wallet = _get_wallet(guest.user)
+
+    if request.method == 'POST':
+        form = WalletCreditForm(request.POST)
+        if form.is_valid():
+            amount = form.cleaned_data['amount']
+            reason = form.cleaned_data['reason'] or "Loyalty reward credit"
+            wallet.credit(amount, reason=reason)
+            guest_name = guest.user.get_full_name() or guest.user.username
+            messages.success(request, f"Added {_money(amount)} to {guest_name}'s wallet.")
+            return redirect('view_guests')
+    else:
+        form = WalletCreditForm()
+
+    return render(request, 'admin_panel/add_wallet_credit.html', {
+        'form': form,
+        'guest': guest,
+        'wallet': wallet,
+        'base_template': _panel_base(request),
+    })
 
 @login_required
 @admin_required
@@ -483,6 +629,11 @@ def staff_check_in(request, booking_id):
     if not booking.actual_check_in:
         booking.actual_check_in = timezone.now()
         booking.save()
+        # Physically occupy the room now that the guest has arrived.
+        room = booking.room
+        if room.room_status == 'available':
+            room.room_status = 'occupied'
+            room.save()
         messages.success(request, f"Guest checked in to Room {booking.room.room_number}")
     
     # SMART REDIRECT
@@ -605,30 +756,47 @@ def order_food(request):
         return redirect('customer_dashboard')
 
     menu_items = FoodItem.objects.filter(is_available=True)
+    wallet = _get_wallet(request.user)
 
     if request.method == 'POST':
         selected_item_ids = request.POST.getlist('items')
         if not selected_item_ids:
             messages.error(request, "Please select at least one item.")
             return redirect('order_food')
-            
+
         # Create Order
         order = FoodOrder.objects.create(booking=active_booking)
-        total = 0
+        subtotal = Decimal('0')
         for item_id in selected_item_ids:
             item = FoodItem.objects.get(id=item_id)
             order.items.add(item)
-            total += item.price
-        
+            subtotal += item.price
+
+        vat_rate, vat_amount, total = _apply_vat(subtotal)
         order.total_price = total
+
+        # Optional immediate payment from the credit wallet.
+        if request.POST.get('pay_method') == 'wallet':
+            if wallet.balance >= total:
+                wallet.debit(total, reason=f"Food Order #{order.id}")
+                order.is_paid = True
+                messages.success(request, f"Order placed and {_money(total)} paid from your wallet!")
+            else:
+                messages.warning(
+                    request,
+                    f"Insufficient wallet balance ({_money(wallet.balance)}). The order ({_money(total)}) was added to "
+                    f"your room bill — top up your wallet or settle it at checkout / via bank transfer."
+                )
+        else:
+            messages.success(request, "Order placed successfully! It has been added to your room bill.")
+
         order.save()
-        
-        messages.success(request, "Order placed successfully! The kitchen is preparing your food.")
         return redirect('customer_food_history')
 
     return render(request, 'customer_panel/order_food.html', {
         'menu': menu_items,
-        'room': active_booking.room
+        'room': active_booking.room,
+        'wallet': wallet,
     })
 
 # --- KITCHEN DASHBOARD ---
@@ -804,6 +972,7 @@ def receptionist_walkin(request):
             booking = Booking.objects.create(
                 user=user,
                 room=room,
+                branch=room.branch,
                 check_in=form.cleaned_data['check_in'],
                 check_out=form.cleaned_data['check_out'],
                 actual_check_in=timezone.now() # Walk-ins check in immediately
@@ -830,8 +999,9 @@ def receptionist_room_status(request):
 @login_required
 @employee_required(allowed_jobs=['receptionist'])
 def receptionist_guest_list(request):
-    # List all customers
+    # List all customers with their wallet balance
     guests = Customer.objects.select_related('user').all().order_by('-id')
+    guests = _attach_wallet_balances(guests)
     return render(request, 'receptionist_panel/guest_list.html', {'guests': guests})
 
 
@@ -939,11 +1109,13 @@ def payment_settings(request):
 @login_required
 @customer_required
 def pay_booking(request, booking_id):
-    """Guest pays for a booking via bank transfer and uploads a receipt."""
+    """Guest pays for a booking via wallet or bank transfer (with receipt upload)."""
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
     bank = PaymentSetting.load()
     receipts = booking.receipts.all()
-    amount_due = _calculate_booking_amount(booking)
+    room_subtotal = _money(_calculate_booking_amount(booking))
+    vat_rate, vat_amount, amount_due = _apply_vat(room_subtotal)
+    wallet = _get_wallet(request.user)
 
     if request.method == 'POST':
         form = PaymentReceiptForm(request.POST, request.FILES)
@@ -963,8 +1135,41 @@ def pay_booking(request, booking_id):
         'bank': bank,
         'form': form,
         'receipts': receipts,
+        'room_subtotal': room_subtotal,
+        'vat_rate': vat_rate,
+        'vat_amount': vat_amount,
         'amount_due': amount_due,
+        'wallet': wallet,
     })
+
+
+@login_required
+@customer_required
+def pay_booking_wallet(request, booking_id):
+    """Pay for a booking using the guest's credit wallet balance."""
+    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
+    if booking.is_paid:
+        messages.info(request, "This booking is already paid.")
+        return redirect('pay_booking', booking_id=booking.id)
+
+    room_subtotal = _money(_calculate_booking_amount(booking))
+    _, vat_amount, total_due = _apply_vat(room_subtotal)
+    wallet = _get_wallet(request.user)
+
+    if wallet.balance >= total_due:
+        wallet.debit(total_due, reason=f"Payment for Booking #{booking.id}")
+        booking.is_paid = True
+        booking.payment_method = 'Wallet'
+        booking.total_amount = total_due
+        booking.save()
+        messages.success(request, f"Paid {_money(total_due)} from your wallet. Your booking is confirmed!")
+    else:
+        messages.error(
+            request,
+            f"Insufficient wallet balance. Your balance is {_money(wallet.balance)} but {_money(total_due)} is required. "
+            f"Please complete the payment using the bank transfer option below and upload your receipt."
+        )
+    return redirect('pay_booking', booking_id=booking.id)
 
 
 @login_required
@@ -1062,6 +1267,26 @@ def reject_payment(request, receipt_id):
 def _get_wallet(user):
     wallet, _ = Wallet.objects.get_or_create(user=user)
     return wallet
+
+
+def _money(value):
+    """Quantise any number to 2 decimal places."""
+    return Decimal(value or 0).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+
+def _vat_rate():
+    try:
+        return SiteSetting.load().vat_percentage or Decimal('0')
+    except Exception:
+        return Decimal('0')
+
+
+def _apply_vat(subtotal):
+    """Return (rate, vat_amount, total_including_vat) for a subtotal."""
+    rate = Decimal(_vat_rate())
+    subtotal = Decimal(subtotal or 0)
+    vat = _money(subtotal * rate / Decimal('100'))
+    return rate, vat, _money(subtotal + vat)
 
 
 def _active_booking_for(user):
@@ -1171,10 +1396,11 @@ def order_drinks(request):
         return redirect('customer_dashboard')
 
     drinks = Drink.objects.filter(is_available=True, stock_quantity__gt=0)
+    wallet = _get_wallet(request.user)
 
     if request.method == 'POST':
         order = BarOrder.objects.create(booking=active_booking)
-        total = 0
+        subtotal = Decimal('0')
         any_item = False
         for drink in drinks:
             qty = int(request.POST.get(f'qty_{drink.id}', 0) or 0)
@@ -1184,7 +1410,7 @@ def order_drinks(request):
                 drink.stock_quantity -= qty
                 drink.save()
                 StockTransaction.objects.create(drink=drink, quantity=-qty, note=f"Bar Order #{order.id}")
-                total += qty * drink.price
+                subtotal += qty * drink.price
                 any_item = True
 
         if not any_item:
@@ -1192,12 +1418,27 @@ def order_drinks(request):
             messages.error(request, "Please select at least one drink.")
             return redirect('order_drinks')
 
+        vat_rate, vat_amount, total = _apply_vat(subtotal)
         order.total_price = total
+
+        if request.POST.get('pay_method') == 'wallet':
+            if wallet.balance >= total:
+                wallet.debit(total, reason=f"Bar Order #{order.id}")
+                order.is_paid = True
+                messages.success(request, f"Drink order placed and {_money(total)} paid from your wallet!")
+            else:
+                messages.warning(
+                    request,
+                    f"Insufficient wallet balance ({_money(wallet.balance)}). The order ({_money(total)}) was added to "
+                    f"your room bill — top up your wallet or settle it at checkout / via bank transfer."
+                )
+        else:
+            messages.success(request, "Drink order placed! It has been added to your room bill.")
+
         order.save()
-        messages.success(request, "Drink order placed! The bar is preparing your order.")
         return redirect('customer_bar_history')
 
-    return render(request, 'customer_panel/order_drinks.html', {'drinks': drinks, 'room': active_booking.room})
+    return render(request, 'customer_panel/order_drinks.html', {'drinks': drinks, 'room': active_booking.room, 'wallet': wallet})
 
 
 @login_required
@@ -1383,9 +1624,20 @@ def _department_recipients(department):
     """All active users belonging to a department/role."""
     if department == 'admin':
         return CustomUser.objects.filter(role='admin', is_active=True)
+    if department == 'guest':
+        return CustomUser.objects.filter(role='customer', is_active=True)
     return CustomUser.objects.filter(
         role='employee', is_active=True, employee_profile__job_type=department
     )
+
+
+def _can_message_anyone(user):
+    """Admin, Manager and Receptionist can target individuals/everyone/guests."""
+    if user.role == 'admin':
+        return True
+    if user.role == 'employee' and hasattr(user, 'employee_profile'):
+        return user.employee_profile.job_type in ('manager', 'receptionist')
+    return False
 
 
 @login_required
@@ -1415,36 +1667,52 @@ def sent_messages(request):
 @login_required
 def compose_message(request):
     my_dept = _current_department(request.user)
+    privileged = _can_message_anyone(request.user)
 
     if request.method == 'POST':
-        form = MessageForm(request.POST, exclude_department=my_dept)
+        form = MessageForm(request.POST, user=request.user, privileged=privileged, exclude_department=my_dept)
         if form.is_valid():
-            department = form.cleaned_data['department']
+            target = form.cleaned_data.get('target_type') or MessageForm.TARGET_DEPARTMENT
             subject = form.cleaned_data['subject']
             body = form.cleaned_data['body']
 
-            recipients = _department_recipients(department).exclude(id=request.user.id)
+            recipient_role = ''
+            target_label = ''
+
+            if privileged and target == MessageForm.TARGET_INDIVIDUAL:
+                person = form.cleaned_data['recipient']
+                recipients = [person] if person else []
+                target_label = person.get_full_name() or person.username if person else ''
+            elif privileged and target == MessageForm.TARGET_EVERYONE:
+                recipients = list(CustomUser.objects.filter(is_active=True).exclude(id=request.user.id))
+                target_label = "everyone (all guests & staff)"
+            else:
+                department = form.cleaned_data['department']
+                recipients = list(_department_recipients(department).exclude(id=request.user.id))
+                recipient_role = department
+                target_label = dict(Message.DEPARTMENT_CHOICES).get(department, department)
+
             count = 0
             for user in recipients:
                 Message.objects.create(
                     sender=request.user,
                     recipient=user,
-                    recipient_role=department,
+                    recipient_role=recipient_role,
                     subject=subject,
                     body=body,
                 )
                 count += 1
 
-            dept_label = dict(Message.DEPARTMENT_CHOICES).get(department, department)
             if count:
-                messages.success(request, f"Message sent to {count} {dept_label} member(s).")
+                messages.success(request, f"Message sent to {count} recipient(s) — {target_label}.")
             else:
-                messages.warning(request, "No active staff found in that department, message not delivered.")
+                messages.warning(request, "No active recipients found, message not delivered.")
             return redirect('sent_messages')
     else:
-        form = MessageForm(exclude_department=my_dept)
+        form = MessageForm(user=request.user, privileged=privileged, exclude_department=my_dept)
     return render(request, 'messaging/compose.html', {
         'form': form,
+        'privileged': privileged,
         'base_template': _panel_base(request),
         'active_tab': 'compose',
     })
@@ -1505,7 +1773,16 @@ def delete_message(request, message_id):
 def manage_branches(request):
     branches = Branch.objects.all()
     page_obj = paginate(request, branches)
-    return render(request, 'admin_panel/branches.html', {'branches': page_obj, 'page_obj': page_obj, 'base_template': _panel_base(request)})
+    active = _active_branch(request)
+    # The first branch acts as the default to switch back to.
+    default_branch = Branch.objects.order_by('id').first()
+    return render(request, 'admin_panel/branches.html', {
+        'branches': page_obj,
+        'page_obj': page_obj,
+        'active_branch': active,
+        'default_branch': default_branch,
+        'base_template': _panel_base(request),
+    })
 
 
 @login_required
@@ -1559,13 +1836,24 @@ def switch_branch(request, branch_id):
 
     if branch_id == 0:
         request.session.pop('active_branch_id', None)
-        messages.info(request, "Viewing all branches.")
+        messages.info(request, "Now viewing ALL branches.")
     else:
         branch = get_object_or_404(Branch, id=branch_id)
         request.session['active_branch_id'] = branch.id
-        messages.info(request, f"Switched to branch: {branch.name}")
+        messages.success(request, f"Switched to {branch.name}. The dashboard, rooms and staff now show this branch.")
 
-    return redirect(request.META.get('HTTP_REFERER', 'home'))
+    # Send the user to their dashboard so the branch change is immediately visible.
+    if request.user.role == 'admin':
+        return redirect('admin_dashboard')
+    return redirect('manager_dashboard')
+
+
+def _active_branch(request):
+    """Return the Branch the admin/manager is currently scoped to (or None = all)."""
+    bid = request.session.get('active_branch_id')
+    if bid:
+        return Branch.objects.filter(id=bid).first()
+    return None
 
 
 @login_required
@@ -1596,5 +1884,209 @@ def manager_dashboard(request):
         'staff_count': staff.count(),
         'recent_bookings': bookings.select_related('user', 'room').order_by('-id')[:8],
         'branches': Branch.objects.filter(is_active=True),
+        'active_branch': _active_branch(request),
     }
     return render(request, 'manager_panel/dashboard.html', context)
+
+
+# ===========================================================================
+# EXPENSES (Admin + Manager)
+# ===========================================================================
+@login_required
+def expense_list(request):
+    if not _can_manage_wallet(request.user):
+        messages.error(request, "Only Admins and Managers can access expenses.")
+        return redirect('home')
+
+    active = _active_branch(request)
+    expenses = Expense.objects.select_related('branch', 'recorded_by').all()
+    if active:
+        expenses = expenses.filter(branch=active)
+
+    total_expenses = expenses.aggregate(Sum('amount'))['amount__sum'] or 0
+    page_obj = paginate(request, expenses)
+    return render(request, 'admin_panel/expenses.html', {
+        'expenses': page_obj,
+        'page_obj': page_obj,
+        'total_expenses': total_expenses,
+        'active_branch': active,
+        'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def add_expense(request):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    active = _active_branch(request)
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST)
+        if form.is_valid():
+            expense = form.save(commit=False)
+            expense.recorded_by = request.user
+            if active and not expense.branch_id:
+                expense.branch = active
+            expense.save()
+            messages.success(request, f"Expense '{expense.title}' recorded.")
+            return redirect('expense_list')
+    else:
+        form = ExpenseForm(initial={'spent_on': timezone.now().date(), 'branch': active})
+    return render(request, 'admin_panel/expense_form.html', {
+        'form': form, 'title': 'Record Expense', 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def edit_expense(request, expense_id):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    expense = get_object_or_404(Expense, id=expense_id)
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST, instance=expense)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Expense updated.")
+            return redirect('expense_list')
+    else:
+        form = ExpenseForm(instance=expense)
+    return render(request, 'admin_panel/expense_form.html', {
+        'form': form, 'title': 'Edit Expense', 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def delete_expense(request, expense_id):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    expense = get_object_or_404(Expense, id=expense_id)
+    expense.delete()
+    messages.success(request, "Expense deleted.")
+    return redirect('expense_list')
+
+
+# ===========================================================================
+# ACCOUNTING & REPORT (Admin + Manager)
+# ===========================================================================
+def _period_range(period):
+    """Return (start_date, end_date, label) for day/week/month/year."""
+    today = timezone.now().date()
+    if period == 'day':
+        return today, today, "Today"
+    if period == 'week':
+        return today - timedelta(days=6), today, "This Week (last 7 days)"
+    if period == 'year':
+        return date(today.year, 1, 1), today, f"This Year ({today.year})"
+    # default: month (current calendar month)
+    return today.replace(day=1), today, today.strftime("This Month (%B %Y)")
+
+
+@login_required
+def accounting_report(request):
+    if not _can_manage_wallet(request.user):
+        messages.error(request, "Only Admins and Managers can view the accounting report.")
+        return redirect('home')
+
+    period = request.GET.get('period', 'month')
+    if period not in ('day', 'week', 'month', 'year'):
+        period = 'month'
+    start, end, label = _period_range(period)
+
+    active = _active_branch(request)
+
+    bookings = Booking.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
+    food = FoodOrder.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
+    bar = BarOrder.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
+    expenses = Expense.objects.filter(spent_on__gte=start, spent_on__lte=end)
+
+    if active:
+        bookings = bookings.filter(branch=active)
+        food = food.filter(booking__branch=active)
+        bar = bar.filter(booking__branch=active)
+        expenses = expenses.filter(branch=active)
+
+    bookings_total = bookings.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0')
+    food_total = food.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')
+    bar_total = bar.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')
+
+    # Bar gross profit (sale price - cost price) for served/paid items.
+    bar_profit = Decimal('0')
+    bar_items = BarOrderItem.objects.filter(order__in=bar).select_related('drink')
+    for item in bar_items:
+        cost = item.drink.cost_price if item.drink else Decimal('0')
+        bar_profit += (item.price - (cost or Decimal('0'))) * item.quantity
+
+    expenses_total = expenses.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
+
+    combined_revenue = bookings_total + food_total + bar_total
+    net = combined_revenue - expenses_total
+
+    # Expense breakdown by category
+    category_breakdown = expenses.values('category').annotate(total=Sum('amount')).order_by('-total')
+    cat_labels = dict(Expense.CATEGORY_CHOICES)
+    category_breakdown = [
+        {'label': cat_labels.get(c['category'], c['category']), 'total': c['total']}
+        for c in category_breakdown
+    ]
+
+    context = {
+        'period': period,
+        'period_label': label,
+        'start': start,
+        'end': end,
+        'bookings_total': _money(bookings_total),
+        'food_total': _money(food_total),
+        'bar_total': _money(bar_total),
+        'bar_profit': _money(bar_profit),
+        'combined_revenue': _money(combined_revenue),
+        'expenses_total': _money(expenses_total),
+        'net': _money(net),
+        'is_profit': net >= 0,
+        'net_abs': _money(abs(net)),
+        'category_breakdown': category_breakdown,
+        'active_branch': active,
+        'base_template': _panel_base(request),
+    }
+    return render(request, 'admin_panel/accounting.html', context)
+
+
+# ===========================================================================
+# GLOBAL SEARCH (top search bar)
+# ===========================================================================
+@login_required
+def global_search(request):
+    if request.user.role not in ('admin', 'employee'):
+        return redirect('home')
+
+    q = (request.GET.get('q') or '').strip()
+    rooms = guests = staff = bookings = drinks = food = []
+    if q:
+        rooms = Room.objects.filter(
+            Q(room_number__icontains=q) | Q(room_type__icontains=q) | Q(description__icontains=q)
+        )[:25]
+        guests = Customer.objects.select_related('user').filter(
+            Q(user__username__icontains=q) | Q(user__first_name__icontains=q) |
+            Q(user__last_name__icontains=q) | Q(user__email__icontains=q) | Q(user__mobile__icontains=q)
+        )[:25]
+        staff = Employee.objects.select_related('user').filter(
+            Q(user__username__icontains=q) | Q(user__first_name__icontains=q) |
+            Q(user__last_name__icontains=q) | Q(job_type__icontains=q) | Q(id_card_number__icontains=q)
+        )[:25]
+        bookings = Booking.objects.select_related('user', 'room').filter(
+            Q(user__username__icontains=q) | Q(user__first_name__icontains=q) |
+            Q(user__last_name__icontains=q) | Q(room__room_number__icontains=q)
+        ).order_by('-id')[:25]
+        drinks = Drink.objects.filter(Q(name__icontains=q) | Q(category__icontains=q))[:25]
+        food = FoodItem.objects.filter(Q(name__icontains=q) | Q(category__icontains=q))[:25]
+
+    total = len(rooms) + len(guests) + len(staff) + len(bookings) + len(drinks) + len(food)
+    return render(request, 'admin_panel/search_results.html', {
+        'q': q,
+        'rooms': rooms,
+        'guests': guests,
+        'staff': staff,
+        'bookings': bookings,
+        'drinks': drinks,
+        'food': food,
+        'total': total,
+        'base_template': _panel_base(request),
+    })

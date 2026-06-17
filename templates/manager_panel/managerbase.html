@@ -34,11 +34,20 @@
       <a href="{% url 'view_bookings' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'view_bookings' %}active{% endif %}">
         <i data-lucide="calendar-check" class="w-5 h-5 mr-3"></i> Bookings
       </a>
+      <a href="{% url 'view_guests' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'view_guests' or request.resolver_match.url_name == 'add_wallet_credit' %}active{% endif %}">
+        <i data-lucide="user-check" class="w-5 h-5 mr-3"></i> Guests
+      </a>
       <a href="{% url 'sales_record' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'sales_record' %}active{% endif %}">
         <i data-lucide="receipt-text" class="w-5 h-5 mr-3"></i> Sales Record
       </a>
       <a href="{% url 'bar_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'bar_inventory' %}active{% endif %}">
         <i data-lucide="package" class="w-5 h-5 mr-3"></i> Bar Inventory
+      </a>
+      <a href="{% url 'expense_list' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'expense' in request.resolver_match.url_name %}active{% endif %}">
+        <i data-lucide="trending-down" class="w-5 h-5 mr-3"></i> Expenses
+      </a>
+      <a href="{% url 'accounting_report' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'accounting_report' %}active{% endif %}">
+        <i data-lucide="bar-chart-3" class="w-5 h-5 mr-3"></i> Accounting &amp; Report
       </a>
       <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
         <i data-lucide="mail" class="w-5 h-5 mr-3"></i> Messages

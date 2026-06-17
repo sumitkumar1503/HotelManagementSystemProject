@@ -18,12 +18,28 @@
             </div>
             <div class="flex justify-between border-b pb-2">
                 <span class="text-gray-500">Price</span>
-                <span class="font-bold text-indigo-600">{{ site_currency }}{{ room.price_per_night }} / night</span>
+                <span class="font-bold text-indigo-600">{{ site_currency }}{{ room.price_per_night|floatformat:2 }} / night</span>
             </div>
-            <div class="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs mt-4">
-                <i class="fa-solid fa-circle-info mr-1"></i>
-                Note: Once you book this room, it will be marked as <strong>Occupied</strong> and no one else can book it.
+            <div class="flex justify-between border-b pb-2">
+                <span class="text-gray-500">Next available</span>
+                <span class="font-bold text-green-600">{{ next_available|date:"M d, Y" }}</span>
             </div>
+
+            {% if booked_ranges %}
+            <div class="bg-amber-50 text-amber-800 p-3 rounded-lg text-xs mt-4">
+                <p class="font-bold mb-1"><i class="fa-solid fa-calendar-xmark mr-1"></i> Already reserved (not available):</p>
+                <ul class="space-y-0.5">
+                    {% for b in booked_ranges %}
+                    <li class="line-through decoration-amber-500">{{ b.check_in|date:"M d, Y" }} → {{ b.check_out|date:"M d, Y" }}</li>
+                    {% endfor %}
+                </ul>
+                <p class="mt-2 not-italic">Please pick dates outside the ranges above.</p>
+            </div>
+            {% else %}
+            <div class="bg-green-50 text-green-700 p-3 rounded-lg text-xs mt-4">
+                <i class="fa-solid fa-circle-check mr-1"></i> This room has no upcoming reservations — book any dates you like.
+            </div>
+            {% endif %}
         </div>
     </div>
 

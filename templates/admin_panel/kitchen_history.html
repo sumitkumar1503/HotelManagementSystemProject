@@ -81,7 +81,7 @@
                             {% endif %}
                         </td>
                         <td data-label="Value" class="px-6 py-4 text-right font-bold text-orange-600">
-                            {{ site_currency }}{{ order.total_price }}
+                            {{ site_currency }}{{ order.total_price|floatformat:2 }}
                         </td>
                     </tr>
                     {% empty %}

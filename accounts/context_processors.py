@@ -8,6 +8,10 @@ def site_globals(request):
         'site_currency_code': 'USD',
         'site_vat': 0,
         'site_hotel_name': 'Grand Hotel',
+        'site_hotel_logo': '',
+        'site_hotel_address': '',
+        'site_hotel_phone': '',
+        'site_hotel_email': '',
     }
 
     try:
@@ -17,6 +21,10 @@ def site_globals(request):
             'site_currency_code': settings_obj.currency_code,
             'site_vat': settings_obj.vat_percentage,
             'site_hotel_name': settings_obj.hotel_name,
+            'site_hotel_logo': settings_obj.hotel_logo.url if settings_obj.hotel_logo else '',
+            'site_hotel_address': settings_obj.hotel_address,
+            'site_hotel_phone': settings_obj.hotel_phone,
+            'site_hotel_email': settings_obj.hotel_email,
         })
     except Exception:
         # Table may not exist yet (e.g. before migrations run).

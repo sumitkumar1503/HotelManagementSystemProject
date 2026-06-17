@@ -41,7 +41,7 @@
                         </div>
                         <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg border border-orange-100">
                             <span class="text-xs font-bold text-gray-500 uppercase">Salary</span>
-                            <span class="font-bold text-green-600">{{ site_currency }}{{ employee.salary }}</span>
+                            <span class="font-bold text-green-600">{{ site_currency }}{{ employee.salary|floatformat:2 }}</span>
                         </div>
                     </div>
                 </div>

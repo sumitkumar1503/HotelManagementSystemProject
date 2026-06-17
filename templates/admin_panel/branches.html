@@ -2,19 +2,43 @@
 {% block title %}Branches{% endblock %}
 {% block panel_content %}
 <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
             <h1 class="text-3xl font-bold text-gray-800">Branch & Location Management</h1>
             <p class="text-gray-500">Create and manage multiple hotel branches and locations.</p>
         </div>
-        <a href="{% url 'add_branch' %}" class="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow transition flex items-center gap-2">
-            <i data-lucide="plus" class="w-4 h-4"></i> Add Branch
-        </a>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'site_settings' %}" class="px-5 py-2.5 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600 shadow transition flex items-center gap-2">
+                <i data-lucide="image" class="w-4 h-4"></i> Edit Hotel Details
+            </a>
+            <a href="{% url 'add_branch' %}" class="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow transition flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> Add Branch
+            </a>
+        </div>
+    </div>
+
+    <!-- Active branch banner -->
+    <div class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2 text-emerald-800">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+            {% if active_branch %}
+                <span>Currently managing: <strong>{{ active_branch.name }}</strong>. New rooms, staff and reports are scoped to this branch.</span>
+            {% else %}
+                <span>Currently viewing <strong>all branches</strong>{% if default_branch %} (default: {{ default_branch.name }}){% endif %}.</span>
+            {% endif %}
+        </div>
+        <div class="flex items-center gap-2">
+            {% if active_branch %}
+                <a href="{% url 'switch_branch' 0 %}" class="px-4 py-2 bg-white border border-emerald-300 text-emerald-700 text-sm font-bold rounded-lg hover:bg-emerald-100">View All Branches</a>
+            {% elif default_branch %}
+                <a href="{% url 'switch_branch' default_branch.id %}" class="px-4 py-2 bg-white border border-emerald-300 text-emerald-700 text-sm font-bold rounded-lg hover:bg-emerald-100">Switch to Default ({{ default_branch.name }})</a>
+            {% endif %}
+        </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for branch in branches %}
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div class="bg-white rounded-2xl shadow-sm border p-6 {% if active_branch and active_branch.id == branch.id %}border-emerald-400 ring-2 ring-emerald-200{% else %}border-gray-100{% endif %}">
             <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center gap-3">
                     <div class="w-11 h-11 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
@@ -37,7 +61,11 @@
                 <p class="text-xs text-gray-400">{{ branch.rooms.count }} rooms · {{ branch.staff.count }} staff</p>
             </div>
             <div class="flex items-center gap-2 pt-3 border-t">
-                <a href="{% url 'switch_branch' branch.id %}" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-bold rounded hover:bg-emerald-100">Manage</a>
+                {% if active_branch and active_branch.id == branch.id %}
+                    <span class="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded">Managing Now</span>
+                {% else %}
+                    <a href="{% url 'switch_branch' branch.id %}" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-bold rounded hover:bg-emerald-100">Manage</a>
+                {% endif %}
                 <a href="{% url 'edit_branch' branch.id %}" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</a>
                 <a href="{% url 'delete_branch' branch.id %}" onclick="return confirm('Delete {{ branch.name }}?');" class="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100">Delete</a>
             </div>

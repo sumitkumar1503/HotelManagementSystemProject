@@ -10,7 +10,7 @@
     
     <div class="relative px-6 py-24 sm:px-12 lg:px-16">
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6">
-            Welcome to <span class="text-yellow-400">Grand Hotel</span>
+            Welcome to <span class="text-yellow-400">{{ site_hotel_name }}</span>
         </h1>
         <p class="mt-4 max-w-xl text-xl text-gray-200 mb-8">
             Experience luxury, comfort, and world-class service. Book your perfect getaway today.
@@ -52,7 +52,7 @@
                     </div>
                 {% endif %}
                 <div class="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold text-gray-800 shadow-sm">
-                    {{ site_currency }}{{ room.price_per_night }} / night
+                    {{ site_currency }}{{ room.price_per_night|floatformat:2 }} / night
                 </div>
             </div>
             
@@ -77,6 +77,8 @@
                     <span class="flex items-center gap-1"><i class="fa-solid fa-wifi"></i> Free Wifi</span>
                     <span class="flex items-center gap-1"><i class="fa-solid fa-ban-smoking"></i> No Smoking</span>
                 </div>
+
+                <p class="text-xs text-green-600 font-semibold mb-3"><i class="fa-solid fa-calendar-check mr-1"></i> Next available: {{ room.next_available|date:"M d, Y" }}</p>
 
                 <!-- Book Now Button Logic -->
                 <a href="{% if user.is_authenticated %}{% url 'book_room' room.id %}{% else %}{% url 'login' %}?next={% url 'book_room' room.id %}{% endif %}" 

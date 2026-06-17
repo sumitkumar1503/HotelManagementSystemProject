@@ -38,7 +38,7 @@
             <div class="p-4">
                 <div class="flex justify-between items-start mb-1">
                     <h3 class="font-bold text-gray-800 truncate" title="{{ item.name }}">{{ item.name }}</h3>
-                    <span class="text-orange-600 font-bold">{{ site_currency }}{{ item.price }}</span>
+                    <span class="text-orange-600 font-bold">{{ site_currency }}{{ item.price|floatformat:2 }}</span>
                 </div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide mb-4">{{ item.get_category_display }}</p>
 

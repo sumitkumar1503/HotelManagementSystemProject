@@ -117,7 +117,7 @@
 
                         <!-- Price Column -->
                         <td data-label="Price" class="px-6 py-4 text-right font-bold text-gray-800">
-                            {{ site_currency }}{{ booking.room.price_per_night }}
+                            {{ site_currency }}{{ booking.room.price_per_night|floatformat:2 }}
                         </td>
 
                         <!-- Payment Column -->

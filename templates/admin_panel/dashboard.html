@@ -38,7 +38,7 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-blue-400 text-xs font-bold uppercase tracking-widest mb-1">Total Revenue</p>
-                    <h2 class="text-4xl font-black text-white mt-1 mb-2 tracking-tight">{{ site_currency }}{{ total_revenue }}</h2>
+                    <h2 class="text-4xl font-black text-white mt-1 mb-2 tracking-tight">{{ site_currency }}{{ total_revenue|floatformat:2 }}</h2>
                 </div>
                 <div class="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 group-hover:bg-blue-500/20 transition">
                     <i data-lucide="dollar-sign" class="w-6 h-6 text-blue-400"></i>

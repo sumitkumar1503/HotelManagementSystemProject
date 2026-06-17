@@ -26,12 +26,24 @@
         
         <div class="p-6 flex-grow flex flex-col">
             <div class="flex justify-between items-center mb-4">
-                <span class="text-2xl font-bold text-indigo-600">{{ site_currency }}{{ room.price_per_night }} <span class="text-sm text-gray-400 font-normal">/ night</span>{% if site_vat %}<span class="block text-xs text-gray-400 font-normal">+ {{ site_vat }}% VAT</span>{% endif %}</span>
+                <span class="text-2xl font-bold text-indigo-600">{{ site_currency }}{{ room.price_per_night|floatformat:2 }} <span class="text-sm text-gray-400 font-normal">/ night</span>{% if site_vat %}<span class="block text-xs text-gray-400 font-normal">+ {{ site_vat }}% VAT</span>{% endif %}</span>
                 <span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full uppercase tracking-wide">
                     Room {{ room.room_number }}
                 </span>
             </div>
-            
+
+            <div class="mb-4 text-xs">
+                <p class="font-semibold text-green-600"><i class="fa-solid fa-calendar-check mr-1"></i> Next available: {{ room.next_available|date:"M d, Y" }}</p>
+                {% if room.booked_ranges %}
+                <p class="text-amber-700 font-semibold mt-2">Reserved dates:</p>
+                <ul class="text-amber-700">
+                    {% for b in room.booked_ranges %}
+                    <li class="line-through decoration-amber-500">{{ b.check_in|date:"M d" }} → {{ b.check_out|date:"M d, Y" }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+
             <p class="text-gray-500 text-sm mb-6 flex-grow">
                 {{ room.description|default:"A perfect choice for travelers seeking comfort and style." }}
             </p>

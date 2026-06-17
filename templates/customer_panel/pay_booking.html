@@ -22,8 +22,8 @@
             </div>
         </div>
         <div class="text-right">
-            <p class="text-xs text-gray-400 uppercase font-bold">Amount Due</p>
-            <p class="text-2xl font-black text-indigo-600">{{ site_currency }}{{ amount_due }}</p>
+            <p class="text-xs text-gray-400 uppercase font-bold">Total Due</p>
+            <p class="text-2xl font-black text-indigo-600">{{ site_currency }}{{ amount_due|floatformat:2 }}</p>
             {% if booking.is_paid %}
                 <span class="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded">PAID</span>
             {% else %}
@@ -31,6 +31,41 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Charge breakdown (Room + VAT) -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Payment Summary</h2>
+        <div class="space-y-2 max-w-sm">
+            <div class="flex justify-between text-gray-600">
+                <span>Room charges</span>
+                <span class="font-semibold">{{ site_currency }}{{ room_subtotal|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>VAT ({{ vat_rate|floatformat:2 }}%)</span>
+                <span class="font-semibold">{{ site_currency }}{{ vat_amount|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between text-lg font-bold text-gray-800 border-t pt-2">
+                <span>Total to pay</span>
+                <span class="text-indigo-600">{{ site_currency }}{{ amount_due|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pay with wallet -->
+    {% if not booking.is_paid %}
+    <div class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl shadow-lg p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <p class="text-xs uppercase tracking-widest text-emerald-100 font-bold flex items-center gap-1"><i data-lucide="wallet" class="w-4 h-4"></i> Pay from Credit Wallet</p>
+            <p class="mt-1 text-sm">Your wallet balance: <span class="font-bold text-lg">{{ site_currency }}{{ wallet.balance|floatformat:2 }}</span></p>
+        </div>
+        <form method="post" action="{% url 'pay_booking_wallet' booking.id %}">
+            {% csrf_token %}
+            <button type="submit" class="px-6 py-3 bg-white text-emerald-700 font-bold rounded-lg hover:bg-emerald-50 shadow transition">
+                Pay {{ site_currency }}{{ amount_due|floatformat:2 }} with Wallet
+            </button>
+        </form>
+    </div>
+    {% endif %}
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Bank details -->
@@ -116,7 +151,7 @@
                                 <i data-lucide="file-text" class="w-4 h-4"></i> View
                             </a>
                         </td>
-                        <td class="px-6 py-4 font-bold text-gray-800">{{ site_currency }}{{ receipt.amount }}</td>
+                        <td class="px-6 py-4 font-bold text-gray-800">{{ site_currency }}{{ receipt.amount|floatformat:2 }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ receipt.note|default:"-" }}</td>
                         <td class="px-6 py-4">
                             {% if receipt.status == 'confirmed' %}

@@ -1,0 +1,116 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Search{% endblock %}
+{% block panel_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Search Results</h1>
+        {% if q %}
+            <p class="text-gray-500">{{ total }} result{{ total|pluralize }} for "<span class="font-semibold text-gray-700">{{ q }}</span>"</p>
+        {% else %}
+            <p class="text-gray-500">Type something in the search bar to find rooms, guests, staff, bookings, drinks and food.</p>
+        {% endif %}
+    </div>
+
+    <!-- Search form (also works on this page) -->
+    <form method="get" action="{% url 'global_search' %}" class="mb-8 flex gap-2 max-w-xl">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search rooms, staff, guests, bookings..."
+               class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none">
+        <button type="submit" class="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Search</button>
+    </form>
+
+    {% if q and total == 0 %}
+    <div class="bg-white rounded-2xl border border-dashed border-gray-300 p-10 text-center text-gray-500">
+        <i data-lucide="search-x" class="w-10 h-10 mx-auto text-gray-300 mb-2"></i>
+        <p>No matches found. Try a different keyword.</p>
+    </div>
+    {% endif %}
+
+    <div class="space-y-8">
+        {% if rooms %}
+        <section>
+            <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="bed-double" class="w-5 h-5 text-indigo-500"></i> Rooms</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for room in rooms %}
+                <a href="{% url 'edit_room' room.id %}" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
+                    <p class="font-bold text-gray-800">Room {{ room.room_number }}</p>
+                    <p class="text-sm text-gray-500">{{ room.get_room_type_display }} · {{ site_currency }}{{ room.price_per_night|floatformat:2 }}/night</p>
+                    <p class="text-xs mt-1 text-gray-400">{{ room.get_room_status_display }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if guests %}
+        <section>
+            <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="user-check" class="w-5 h-5 text-blue-500"></i> Guests</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for g in guests %}
+                <a href="{% url 'view_guests' %}" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
+                    <p class="font-bold text-gray-800">{{ g.user.get_full_name|default:g.user.username }}</p>
+                    <p class="text-sm text-gray-500">{{ g.user.mobile }} · {{ g.user.email }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if staff %}
+        <section>
+            <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-emerald-500"></i> Staff</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for s in staff %}
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                    <p class="font-bold text-gray-800">{{ s.user.get_full_name|default:s.user.username }}</p>
+                    <p class="text-sm text-gray-500">{{ s.get_job_type_display }} · ID {{ s.id_card_number }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if bookings %}
+        <section>
+            <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="calendar-check" class="w-5 h-5 text-purple-500"></i> Bookings</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for b in bookings %}
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                    <p class="font-bold text-gray-800">#{{ b.id }} · {{ b.user.get_full_name|default:b.user.username }}</p>
+                    <p class="text-sm text-gray-500">Room {{ b.room.room_number }} · {{ b.status }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if drinks %}
+        <section>
+            <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="wine" class="w-5 h-5 text-fuchsia-500"></i> Drinks</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for d in drinks %}
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                    <p class="font-bold text-gray-800">{{ d.name }}</p>
+                    <p class="text-sm text-gray-500">{{ site_currency }}{{ d.price|floatformat:2 }} · Stock {{ d.stock_quantity }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if food %}
+        <section>
+            <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><i data-lucide="utensils" class="w-5 h-5 text-amber-500"></i> Food</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for f in food %}
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                    <p class="font-bold text-gray-800">{{ f.name }}</p>
+                    <p class="text-sm text-gray-500">{{ f.get_category_display }} · {{ site_currency }}{{ f.price|floatformat:2 }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</div>
+<script>lucide.createIcons();</script>
+{% endblock %}

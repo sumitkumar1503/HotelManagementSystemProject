@@ -61,7 +61,7 @@
                                 <span class="flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i> {{ emp.user.email }}</span>
                             </div>
                         </td>
-                        <td data-label="Salary" class="p-4 text-gray-700 font-mono">{{ site_currency }}{{ emp.salary }}</td>
+                        <td data-label="Salary" class="p-4 text-gray-700 font-mono">{{ site_currency }}{{ emp.salary|floatformat:2 }}</td>
                         <td data-label="Exp (Yrs)" class="p-4 text-center text-gray-600">{{ emp.years_of_experience }}</td>
                         <td class="rtable-actions p-4 text-right">
                             <div class="flex justify-end gap-2">

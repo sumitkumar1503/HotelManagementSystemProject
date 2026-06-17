@@ -16,9 +16,11 @@
         <!-- Invoice Header -->
         <div class="flex justify-between items-start border-b border-gray-100 pb-8 mb-8">
             <div>
-                <h1 class="text-4xl font-bold text-gray-800">Grand Hotel</h1>
-                <p class="text-gray-500 mt-1">123 Luxury Ave, Hotel City</p>
-                <p class="text-gray-500">contact@grandhotel.com</p>
+                {% if site_hotel_logo %}<img src="{{ site_hotel_logo }}" class="h-12 mb-2">{% endif %}
+                <h1 class="text-4xl font-bold text-gray-800">{{ site_hotel_name }}</h1>
+                {% if site_hotel_address %}<p class="text-gray-500 mt-1">{{ site_hotel_address }}</p>{% endif %}
+                {% if site_hotel_phone %}<p class="text-gray-500">{{ site_hotel_phone }}</p>{% endif %}
+                {% if site_hotel_email %}<p class="text-gray-500">{{ site_hotel_email }}</p>{% endif %}
             </div>
             <div class="text-right">
                 <h2 class="text-2xl font-bold text-purple-700">INVOICE</h2>
@@ -58,8 +60,8 @@
                 <tr class="border-b border-gray-50">
                     <td class="py-4 px-4 font-medium">Room Charges ({{ duration }} Nights)</td>
                     <td class="py-4 px-4 text-center">{{ duration }}</td>
-                    <td class="py-4 px-4 text-right">{{ site_currency }}{{ booking.room.price_per_night }}</td>
-                    <td class="py-4 px-4 text-right">{{ site_currency }}{{ room_total }}</td>
+                    <td class="py-4 px-4 text-right">{{ site_currency }}{{ booking.room.price_per_night|floatformat:2 }}</td>
+                    <td class="py-4 px-4 text-right">{{ site_currency }}{{ room_total|floatformat:2 }}</td>
                 </tr>
 
                 <!-- Food Charges -->
@@ -68,8 +70,8 @@
                     <tr class="border-b border-gray-50">
                         <td class="py-4 px-4 text-gray-500">Room Service: {{ item.name }}</td>
                         <td class="py-4 px-4 text-center">1</td>
-                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.price }}</td>
-                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.price }}</td>
+                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.price|floatformat:2 }}</td>
+                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.price|floatformat:2 }}</td>
                     </tr>
                     {% endfor %}
                 {% endfor %}
@@ -80,8 +82,8 @@
                     <tr class="border-b border-gray-50">
                         <td class="py-4 px-4 text-gray-500">Bar: {{ item.drink.name }}</td>
                         <td class="py-4 px-4 text-center">{{ item.quantity }}</td>
-                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.price }}</td>
-                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.subtotal }}</td>
+                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.price|floatformat:2 }}</td>
+                        <td class="py-4 px-4 text-right">{{ site_currency }}{{ item.subtotal|floatformat:2 }}</td>
                     </tr>
                     {% endfor %}
                 {% endfor %}
@@ -93,7 +95,7 @@
             <div class="w-1/2">
                 <div class="flex justify-between py-2 border-b border-gray-100">
                     <span class="text-gray-600">Subtotal</span>
-                    <span class="font-semibold">{{ site_currency }}{{ subtotal }}</span>
+                    <span class="font-semibold">{{ site_currency }}{{ subtotal|floatformat:2 }}</span>
                 </div>
                 <div class="flex justify-between py-2 border-b border-gray-100">
                     <span class="text-gray-600">VAT ({{ vat_rate }}%)</span>

@@ -1,0 +1,77 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Accounting & Report{% endblock %}
+{% block panel_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Accounting & Report</h1>
+            <p class="text-gray-500">{{ period_label }}
+            {% if active_branch %}<span class="font-semibold text-emerald-600">· {{ active_branch.name }}</span>{% endif %}</p>
+        </div>
+    </div>
+
+    <!-- Period filter -->
+    <div class="flex flex-wrap gap-2 mb-6">
+        <a href="?period=day" class="px-4 py-2 rounded-lg text-sm font-bold {% if period == 'day' %}bg-blue-600 text-white{% else %}bg-white text-gray-600 border border-gray-200 hover:bg-gray-50{% endif %}">Day</a>
+        <a href="?period=week" class="px-4 py-2 rounded-lg text-sm font-bold {% if period == 'week' %}bg-blue-600 text-white{% else %}bg-white text-gray-600 border border-gray-200 hover:bg-gray-50{% endif %}">Week</a>
+        <a href="?period=month" class="px-4 py-2 rounded-lg text-sm font-bold {% if period == 'month' %}bg-blue-600 text-white{% else %}bg-white text-gray-600 border border-gray-200 hover:bg-gray-50{% endif %}">Month</a>
+        <a href="?period=year" class="px-4 py-2 rounded-lg text-sm font-bold {% if period == 'year' %}bg-blue-600 text-white{% else %}bg-white text-gray-600 border border-gray-200 hover:bg-gray-50{% endif %}">Year</a>
+    </div>
+
+    <!-- Revenue cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center gap-2 text-indigo-500 mb-2"><i data-lucide="bed-double" class="w-5 h-5"></i><span class="text-xs font-bold uppercase">Room Bookings</span></div>
+            <p class="text-2xl font-black text-gray-800">{{ site_currency }}{{ bookings_total|floatformat:2 }}</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center gap-2 text-amber-500 mb-2"><i data-lucide="utensils" class="w-5 h-5"></i><span class="text-xs font-bold uppercase">Food Orders</span></div>
+            <p class="text-2xl font-black text-gray-800">{{ site_currency }}{{ food_total|floatformat:2 }}</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center gap-2 text-fuchsia-500 mb-2"><i data-lucide="wine" class="w-5 h-5"></i><span class="text-xs font-bold uppercase">Bar Orders</span></div>
+            <p class="text-2xl font-black text-gray-800">{{ site_currency }}{{ bar_total|floatformat:2 }}</p>
+            <p class="text-xs text-emerald-600 mt-1 font-semibold">Bar profit: {{ site_currency }}{{ bar_profit|floatformat:2 }}</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center gap-2 text-rose-500 mb-2"><i data-lucide="trending-down" class="w-5 h-5"></i><span class="text-xs font-bold uppercase">Expenses</span></div>
+            <p class="text-2xl font-black text-gray-800">{{ site_currency }}{{ expenses_total|floatformat:2 }}</p>
+        </div>
+    </div>
+
+    <!-- Profit / Loss summary -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4">Profit & Loss Summary</h2>
+            <div class="space-y-2 max-w-lg">
+                <div class="flex justify-between text-gray-600"><span>Room bookings</span><span class="font-semibold">{{ site_currency }}{{ bookings_total|floatformat:2 }}</span></div>
+                <div class="flex justify-between text-gray-600"><span>Food orders</span><span class="font-semibold">{{ site_currency }}{{ food_total|floatformat:2 }}</span></div>
+                <div class="flex justify-between text-gray-600"><span>Bar orders</span><span class="font-semibold">{{ site_currency }}{{ bar_total|floatformat:2 }}</span></div>
+                <div class="flex justify-between text-gray-800 font-bold border-t pt-2"><span>Combined revenue</span><span>{{ site_currency }}{{ combined_revenue|floatformat:2 }}</span></div>
+                <div class="flex justify-between text-rose-600"><span>Less: total expenses</span><span class="font-semibold">- {{ site_currency }}{{ expenses_total|floatformat:2 }}</span></div>
+            </div>
+            <div class="mt-5 p-5 rounded-xl {% if is_profit %}bg-emerald-50{% else %}bg-rose-50{% endif %}">
+                <p class="text-xs uppercase font-bold {% if is_profit %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                    {% if is_profit %}Total Profit{% else %}Total Loss{% endif %}
+                </p>
+                <p class="text-3xl font-black {% if is_profit %}text-emerald-700{% else %}text-rose-700{% endif %}">
+                    {% if not is_profit %}- {% endif %}{{ site_currency }}{{ net_abs|floatformat:2 }}
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4">Expenses by Category</h2>
+            {% for c in category_breakdown %}
+            <div class="flex justify-between py-2 border-b border-gray-50 text-sm">
+                <span class="text-gray-600">{{ c.label }}</span>
+                <span class="font-semibold text-gray-800">{{ site_currency }}{{ c.total|floatformat:2 }}</span>
+            </div>
+            {% empty %}
+            <p class="text-sm text-gray-400">No expenses in this period.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+<script>lucide.createIcons();</script>
+{% endblock %}

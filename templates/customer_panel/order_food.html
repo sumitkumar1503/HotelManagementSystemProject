@@ -35,7 +35,7 @@
                     <div class="p-5">
                         <div class="flex justify-between items-start">
                             <h3 class="font-bold text-gray-800">{{ item.name }}</h3>
-                            <span class="font-bold text-indigo-600">{{ site_currency }}{{ item.price }}</span>
+                            <span class="font-bold text-indigo-600">{{ site_currency }}{{ item.price|floatformat:2 }}</span>
                         </div>
                         <p class="text-xs text-gray-500 uppercase mt-1 tracking-wider">{{ item.get_category_display }}{% if site_vat %} · +{{ site_vat }}% VAT{% endif %}</p>
                     </div>
@@ -50,12 +50,16 @@
 
         <!-- Sticky Footer for Order Button -->
         <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:pl-64 z-40">
-            <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="max-w-6xl mx-auto flex flex-wrap justify-between items-center gap-3">
                 <div class="flex flex-col">
-                    <span class="text-gray-500 text-sm">Total Amount</span>
+                    <span class="text-gray-500 text-sm">Subtotal <span id="subTotal">{{ site_currency }}0.00</span>{% if site_vat %} · VAT {{ site_vat|floatformat:2 }}% <span id="vatAmt">{{ site_currency }}0.00</span>{% endif %}</span>
                     <span class="text-2xl font-bold text-indigo-600" id="totalPrice">{{ site_currency }}0.00</span>
                 </div>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-4 flex-wrap">
+                    <label class="flex items-center gap-2 text-sm text-gray-600 bg-emerald-50 px-3 py-2 rounded-lg">
+                        <input type="checkbox" name="pay_method" value="wallet" class="w-4 h-4 text-emerald-600">
+                        Pay now with wallet ({{ site_currency }}{{ wallet.balance|floatformat:2 }})
+                    </label>
                     <span class="text-gray-400 text-sm hidden sm:inline" id="itemCount">0 items selected</span>
                     <button type="submit" id="orderBtn" disabled class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-xl shadow-lg transition transform hover:-translate-y-1">
                         Place Order
@@ -73,20 +77,29 @@
         const countDisplay = document.getElementById('itemCount');
         const orderBtn = document.getElementById('orderBtn');
 
+        const vatRate = parseFloat("{{ site_vat|default:0 }}") || 0;
+        const subDisplay = document.getElementById('subTotal');
+        const vatDisplay = document.getElementById('vatAmt');
+        const sym = "{{ site_currency }}";
+
         function calculateTotal() {
-            let total = 0;
+            let subtotal = 0;
             let count = 0;
             checkboxes.forEach(box => {
                 if(box.checked) {
-                    total += parseFloat(box.getAttribute('data-price'));
+                    subtotal += parseFloat(box.getAttribute('data-price'));
                     count++;
                 }
             });
-            
-            // Update UI
-            priceDisplay.textContent = "{{ site_currency }}" + total.toFixed(2);
+
+            const vat = subtotal * vatRate / 100;
+            const total = subtotal + vat;
+
+            if(subDisplay) subDisplay.textContent = sym + subtotal.toFixed(2);
+            if(vatDisplay) vatDisplay.textContent = sym + vat.toFixed(2);
+            priceDisplay.textContent = sym + total.toFixed(2);
             countDisplay.textContent = count + ' items selected';
-            
+
             if(count > 0) {
                 orderBtn.removeAttribute('disabled');
             } else {

@@ -49,6 +49,19 @@ urlpatterns = [
     # Admin Payment Settings
     path('dashboard/admin/payment-settings/', views.payment_settings, name='payment_settings'),
     path('dashboard/admin/site-settings/', views.site_settings, name='site_settings'),
+    path('dashboard/admin/guests/<int:guest_id>/add-credit/', views.add_wallet_credit, name='add_wallet_credit'),
+
+    # Expenses (Admin + Manager)
+    path('dashboard/expenses/', views.expense_list, name='expense_list'),
+    path('dashboard/expenses/add/', views.add_expense, name='add_expense'),
+    path('dashboard/expenses/edit/<int:expense_id>/', views.edit_expense, name='edit_expense'),
+    path('dashboard/expenses/delete/<int:expense_id>/', views.delete_expense, name='delete_expense'),
+
+    # Accounting & Report (Admin + Manager)
+    path('dashboard/accounting/', views.accounting_report, name='accounting_report'),
+
+    # Global Search
+    path('dashboard/search/', views.global_search, name='global_search'),
 
     # Multi-branch Management (Admin / Manager)
     path('dashboard/branches/', views.manage_branches, name='manage_branches'),
@@ -89,6 +102,7 @@ urlpatterns = [
     path('dashboard/customer/food-orders/', views.customer_food_history, name='customer_food_history'),
     path('dashboard/customer/profile/', views.customer_profile, name='customer_profile'),
     path('dashboard/customer/pay/<int:booking_id>/', views.pay_booking, name='pay_booking'),
+    path('dashboard/customer/pay/<int:booking_id>/wallet/', views.pay_booking_wallet, name='pay_booking_wallet'),
     path('dashboard/customer/receipt/edit/<int:receipt_id>/', views.edit_receipt, name='edit_receipt'),
     path('dashboard/customer/receipt/delete/<int:receipt_id>/', views.delete_receipt, name='delete_receipt'),
     path('dashboard/customer/order-drinks/', views.order_drinks, name='order_drinks'),

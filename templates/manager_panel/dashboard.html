@@ -21,7 +21,7 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <p class="text-gray-400 text-xs font-bold uppercase">Revenue</p>
-            <h3 class="text-2xl font-black text-gray-800">{{ site_currency }}{{ total_revenue }}</h3>
+            <h3 class="text-2xl font-black text-gray-800">{{ site_currency }}{{ total_revenue|floatformat:2 }}</h3>
         </div>
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <p class="text-gray-400 text-xs font-bold uppercase">Bookings</p>
@@ -57,7 +57,7 @@
                     <td data-label="Guest" class="px-6 py-4 font-semibold text-gray-800">{{ booking.user.get_full_name|default:booking.user.username }}</td>
                     <td data-label="Room" class="px-6 py-4">Room {{ booking.room.room_number }}</td>
                     <td data-label="Status" class="px-6 py-4 text-sm">{{ booking.status }}</td>
-                    <td data-label="Amount" class="px-6 py-4 text-right font-bold">{{ site_currency }}{{ booking.total_amount }}</td>
+                    <td data-label="Amount" class="px-6 py-4 text-right font-bold">{{ site_currency }}{{ booking.total_amount|floatformat:2 }}</td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="4" class="p-8 text-center text-gray-500">No bookings found.</td></tr>
