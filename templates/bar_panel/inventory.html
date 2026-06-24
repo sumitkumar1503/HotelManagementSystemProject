@@ -7,9 +7,17 @@
             <h2 class="text-3xl font-bold text-gray-800">Bar Inventory</h2>
             <p class="text-gray-500">Manage drinks and restock for proper stock keeping.</p>
         </div>
-        <a href="{% url 'add_drink' %}" class="px-5 py-2.5 bg-fuchsia-600 text-white font-bold rounded-lg hover:bg-fuchsia-700 shadow transition flex items-center gap-2">
-            <i data-lucide="plus" class="w-4 h-4"></i> Add Drink
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'import_drinks_csv' %}" class="px-4 py-2.5 bg-amber-100 text-amber-800 font-bold rounded-lg hover:bg-amber-200 shadow-sm transition flex items-center gap-2">
+                <i data-lucide="upload" class="w-4 h-4"></i> Import CSV
+            </a>
+            <a href="{% url 'export_drinks_csv' %}" class="px-4 py-2.5 bg-sky-100 text-sky-800 font-bold rounded-lg hover:bg-sky-200 shadow-sm transition flex items-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+            </a>
+            <a href="{% url 'add_drink' %}" class="px-5 py-2.5 bg-fuchsia-600 text-white font-bold rounded-lg hover:bg-fuchsia-700 shadow transition flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> Add Drink
+            </a>
+        </div>
     </div>
 
     <div class="bg-white rounded-xl shadow-lg border border-fuchsia-100 overflow-x-auto">
@@ -22,6 +30,7 @@
                     <th class="px-6 py-4">Sale Price</th>
                     <th class="px-6 py-4">Profit / Unit</th>
                     <th class="px-6 py-4">Stock</th>
+                    <th class="px-6 py-4">Expiry</th>
                     <th class="px-6 py-4">Status</th>
                     <th class="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -44,7 +53,18 @@
                     <td data-label="Sale Price" class="px-6 py-4 font-semibold text-gray-800">{{ site_currency }}{{ drink.price|floatformat:2 }}</td>
                     <td data-label="Profit / Unit" class="px-6 py-4 font-semibold {% if drink.profit_per_unit > 0 %}text-emerald-600{% else %}text-red-600{% endif %}">{{ site_currency }}{{ drink.profit_per_unit|floatformat:2 }}</td>
                     <td data-label="Stock" class="px-6 py-4">
-                        <span class="font-bold {% if drink.stock_quantity <= 5 %}text-red-600{% else %}text-gray-800{% endif %}">{{ drink.stock_quantity }}</span>
+                        <span class="font-bold {% if drink.is_low_stock %}text-red-600{% else %}text-gray-800{% endif %}">{{ drink.stock_quantity }}</span>
+                        {% if drink.is_low_stock %}<span class="ml-1 px-1.5 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded">LOW</span>{% endif %}
+                    </td>
+                    <td data-label="Expiry" class="px-6 py-4 text-sm">
+                        {% if drink.expiry_date %}
+                            <span class="{% if drink.is_expired %}text-red-600 font-bold{% elif drink.is_expiring_soon %}text-amber-600 font-semibold{% else %}text-gray-600{% endif %}">
+                                {{ drink.expiry_date|date:"M d, Y" }}
+                            </span>
+                            {% if drink.is_expired %}<span class="block text-[10px] text-red-500">Expired</span>{% elif drink.is_expiring_soon %}<span class="block text-[10px] text-amber-500">Soon</span>{% endif %}
+                        {% else %}
+                            <span class="text-gray-400">—</span>
+                        {% endif %}
                     </td>
                     <td data-label="Status" class="px-6 py-4">
                         {% if drink.is_available and drink.stock_quantity > 0 %}
@@ -62,7 +82,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="8" class="p-10 text-center text-gray-500">No drinks yet. Add your first drink.</td></tr>
+                <tr><td colspan="9" class="p-10 text-center text-gray-500">No drinks yet. Add your first drink.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -1,0 +1,55 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Laundry Services{% endblock %}
+{% block panel_content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Laundry Services</h2>
+            <p class="text-gray-500">Manage the laundry menu guests can order from.</p>
+        </div>
+        <a href="{% url 'add_laundry_service' %}" class="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow transition flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Service
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-x-auto">
+        <table class="rtable w-full text-left min-w-[640px]">
+            <thead class="bg-indigo-50 text-indigo-900 text-xs uppercase font-semibold border-b border-indigo-100">
+                <tr>
+                    <th class="px-6 py-4">Service</th>
+                    <th class="px-6 py-4">Type</th>
+                    <th class="px-6 py-4">Cost</th>
+                    <th class="px-6 py-4">Price</th>
+                    <th class="px-6 py-4">Profit</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for s in services %}
+                <tr class="hover:bg-indigo-50/40 transition">
+                    <td data-label="Service" class="px-6 py-4 font-bold text-gray-800">{{ s.name }}</td>
+                    <td data-label="Type" class="px-6 py-4 text-sm text-gray-500">{{ s.get_service_type_display }}</td>
+                    <td data-label="Cost" class="px-6 py-4 text-sm text-gray-600">{{ site_currency }}{{ s.cost_price|floatformat:2 }}</td>
+                    <td data-label="Price" class="px-6 py-4 font-semibold text-gray-800">{{ site_currency }}{{ s.price|floatformat:2 }}</td>
+                    <td data-label="Profit" class="px-6 py-4 font-semibold text-emerald-600">{{ site_currency }}{{ s.profit_per_unit|floatformat:2 }}</td>
+                    <td data-label="Status" class="px-6 py-4">
+                        {% if s.is_available %}<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Available</span>
+                        {% else %}<span class="px-2 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded">Off</span>{% endif %}
+                    </td>
+                    <td class="rtable-actions px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url 'edit_laundry_service' s.id %}" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</a>
+                            <a href="{% url 'delete_laundry_service' s.id %}" onclick="return confirm('Delete {{ s.name }}?');" class="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100">Delete</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="p-10 text-center text-gray-500">No laundry services yet. Add wash, iron, dry-clean, etc.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'common/_pagination.html' %}
+</div>
+{% endblock %}

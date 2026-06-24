@@ -1,0 +1,76 @@
+{% extends base_template|default:'housekeeping_panel/housekeepingbase.html' %}
+{% block title %}Laundry Orders{% endblock %}
+{% block panel_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Laundry Orders</h2>
+            <p class="text-gray-500">Monitor guest laundry orders and mark them as paid / delivered.</p>
+        </div>
+        <div class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg text-sm font-bold">
+            Paid revenue: {{ site_currency }}{{ revenue }}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-x-auto">
+        <table class="rtable w-full text-left min-w-[760px]">
+            <thead class="bg-gray-50 text-gray-700 text-xs uppercase font-semibold border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4">Order</th>
+                    <th class="px-6 py-4">Room / Guest</th>
+                    <th class="px-6 py-4">Items</th>
+                    <th class="px-6 py-4">Total</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4">Payment</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for order in orders %}
+                <tr class="hover:bg-gray-50/60 transition align-top">
+                    <td data-label="Order" class="px-6 py-4">
+                        <span class="font-bold text-gray-800">#{{ order.id }}</span>
+                        <span class="block text-xs text-gray-400">{{ order.created_at|date:"M d, H:i" }}</span>
+                    </td>
+                    <td data-label="Room / Guest" class="px-6 py-4 text-sm">
+                        <span class="font-semibold text-gray-800">Room {{ order.booking.room.room_number }}</span>
+                        <span class="block text-gray-500">{{ order.booking.user.get_full_name|default:order.booking.user.username }}</span>
+                    </td>
+                    <td data-label="Items" class="px-6 py-4 text-sm text-gray-600">
+                        {% for item in order.items.all %}
+                            <div>{{ item.quantity }} × {{ item.service.name|default:"Service" }}</div>
+                        {% endfor %}
+                    </td>
+                    <td data-label="Total" class="px-6 py-4 font-bold text-gray-800">{{ site_currency }}{{ order.total_price|floatformat:2 }}</td>
+                    <td data-label="Status" class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs font-bold rounded
+                            {% if order.status == 'delivered' %}bg-green-100 text-green-700
+                            {% elif order.status == 'ready' %}bg-blue-100 text-blue-700
+                            {% elif order.status == 'processing' %}bg-amber-100 text-amber-700
+                            {% else %}bg-gray-100 text-gray-600{% endif %}">{{ order.get_status_display }}</span>
+                    </td>
+                    <td data-label="Payment" class="px-6 py-4">
+                        {% if order.is_paid %}
+                            <span class="px-2 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-700">Paid</span>
+                        {% else %}
+                            <span class="px-2 py-1 text-xs font-bold rounded bg-red-100 text-red-600">Unpaid</span>
+                        {% endif %}
+                    </td>
+                    <td class="rtable-actions px-6 py-4 text-right">
+                        <div class="flex flex-wrap items-center justify-end gap-2">
+                            {% if order.status != 'processing' %}<a href="{% url 'update_laundry_status' order.id 'processing' %}" class="px-2.5 py-1.5 bg-amber-50 text-amber-700 text-xs font-bold rounded hover:bg-amber-100">Processing</a>{% endif %}
+                            {% if order.status != 'ready' %}<a href="{% url 'update_laundry_status' order.id 'ready' %}" class="px-2.5 py-1.5 bg-blue-50 text-blue-700 text-xs font-bold rounded hover:bg-blue-100">Ready</a>{% endif %}
+                            {% if order.status != 'delivered' %}<a href="{% url 'update_laundry_status' order.id 'delivered' %}" class="px-2.5 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded hover:bg-green-100">Delivered</a>{% endif %}
+                            {% if not order.is_paid %}<a href="{% url 'mark_laundry_paid' order.id %}" class="px-2.5 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded hover:bg-emerald-700">Mark Paid</a>{% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="p-10 text-center text-gray-500">No laundry orders yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'common/_pagination.html' %}
+</div>
+{% endblock %}

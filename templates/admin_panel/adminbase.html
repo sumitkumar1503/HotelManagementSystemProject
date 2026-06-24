@@ -151,6 +151,7 @@
     <div id="kitchen-submenu" class="pl-8 pt-2 space-y-1 hidden">
       <a href="{% url 'view_food_menu' %}" class="submenu-link block p-2 rounded-lg text-sm">Manage Menu</a>
       <a href="{% url 'add_food_item' %}" class="submenu-link block p-2 rounded-lg text-sm">Add Food Item</a>
+      <a href="{% url 'ingredient_inventory' %}" class="submenu-link block p-2 rounded-lg text-sm">Ingredient Inventory</a>
       <a href="{% url 'admin_kitchen_monitor' %}" class="submenu-link block p-2 rounded-lg text-sm">Kitchen Monitor</a>
     <a href="{% url 'admin_kitchen_history' %}" class="submenu-link block p-2 rounded-lg text-sm">Delivery History</a>
 
@@ -194,6 +195,16 @@
     <span>Sales Record</span>
 </a>
 
+<!-- Laundry -->
+<a href="{% url 'laundry_monitor' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'laundry_monitor' %}active{% endif %}">
+    <i data-lucide="washing-machine" class="w-5 h-5 mr-4"></i>
+    <span>Laundry Orders</span>
+</a>
+<a href="{% url 'laundry_services' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'laundry_service' in request.resolver_match.url_name %}active{% endif %}">
+    <i data-lucide="shirt" class="w-5 h-5 mr-4"></i>
+    <span>Laundry Services</span>
+</a>
+
 <!-- Expenses -->
 <a href="{% url 'expense_list' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'expense' in request.resolver_match.url_name %}active{% endif %}">
     <i data-lucide="trending-down" class="w-5 h-5 mr-4"></i>
@@ -229,6 +240,12 @@
 <a href="{% url 'site_settings' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'site_settings' %}active{% endif %}">
     <i data-lucide="badge-dollar-sign" class="w-5 h-5 mr-4"></i>
     <span>Currency &amp; VAT</span>
+</a>
+
+<!-- Website Content (Home & About) -->
+<a href="{% url 'site_content' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'site_content' %}active{% endif %}">
+    <i data-lucide="layout-template" class="w-5 h-5 mr-4"></i>
+    <span>Website Content</span>
 </a>
 
       <!-- Home Page Link -->
@@ -270,7 +287,7 @@
       
       <!-- Right: Notifications & Profile -->
       <div class="flex items-center space-x-4">
-        <i data-lucide="bell" class="w-6 h-6 cursor-pointer hover:text-blue-400 transition"></i>
+        {% include 'common/_notification_bell.html' %}
         <div class="relative group">
             <div class="flex items-center gap-2 cursor-pointer">
                 <span class="text-sm font-semibold hidden md:block">{{ user.username|title }}</span>

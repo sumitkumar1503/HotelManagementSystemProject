@@ -1,0 +1,27 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Notifications{% endblock %}
+{% block panel_content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-3xl font-bold text-gray-800">Notifications</h2>
+        <a href="{% url 'mark_notifications_read' %}" class="px-4 py-2 bg-blue-50 text-blue-600 text-sm font-bold rounded-lg hover:bg-blue-100">Mark all read</a>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 divide-y divide-gray-100 overflow-hidden">
+        {% for n in notifications %}
+        <a href="{% url 'open_notification' n.id %}" class="flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition {% if not n.is_read %}bg-blue-50/60{% endif %}">
+            <span class="mt-0.5 text-blue-600"><i data-lucide="{{ n.icon }}" class="w-5 h-5"></i></span>
+            <span class="flex-1 min-w-0">
+                <span class="block font-semibold text-gray-800">{{ n.title }}</span>
+                {% if n.body %}<span class="block text-sm text-gray-500">{{ n.body }}</span>{% endif %}
+                <span class="block text-xs text-gray-400 mt-0.5">{{ n.created_at|date:"M d, Y H:i" }}</span>
+            </span>
+            {% if not n.is_read %}<span class="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1.5"></span>{% endif %}
+        </a>
+        {% empty %}
+        <div class="px-5 py-12 text-center text-gray-400">No notifications yet.</div>
+        {% endfor %}
+    </div>
+    {% include 'common/_pagination.html' %}
+</div>
+{% endblock %}

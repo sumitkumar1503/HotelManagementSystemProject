@@ -1,0 +1,75 @@
+{% extends base_template|default:'kitchen_panel/kitchenbase.html' %}
+{% block title %}Ingredient Inventory{% endblock %}
+{% block panel_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Kitchen Ingredient Inventory</h2>
+            <p class="text-gray-500">Track stock levels, restock and expiry for kitchen ingredients.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'import_ingredients_csv' %}" class="px-4 py-2.5 bg-amber-100 text-amber-800 font-bold rounded-lg hover:bg-amber-200 shadow-sm transition flex items-center gap-2">
+                <i data-lucide="upload" class="w-4 h-4"></i> Import CSV
+            </a>
+            <a href="{% url 'export_ingredients_csv' %}" class="px-4 py-2.5 bg-sky-100 text-sky-800 font-bold rounded-lg hover:bg-sky-200 shadow-sm transition flex items-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+            </a>
+            <a href="{% url 'add_ingredient' %}" class="px-5 py-2.5 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 shadow transition flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> Add Ingredient
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-orange-100 overflow-x-auto">
+        <table class="rtable w-full text-left min-w-[640px]">
+            <thead class="bg-orange-50 text-orange-900 text-xs uppercase font-semibold border-b border-orange-100">
+                <tr>
+                    <th class="px-6 py-4">Ingredient</th>
+                    <th class="px-6 py-4">Unit</th>
+                    <th class="px-6 py-4">Cost / Unit</th>
+                    <th class="px-6 py-4">Stock</th>
+                    <th class="px-6 py-4">Expiry</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for ing in ingredients %}
+                <tr class="hover:bg-orange-50/40 transition">
+                    <td data-label="Ingredient" class="px-6 py-4 font-bold text-gray-800">{{ ing.name }}</td>
+                    <td data-label="Unit" class="px-6 py-4 text-sm text-gray-500">{{ ing.get_unit_display }}</td>
+                    <td data-label="Cost / Unit" class="px-6 py-4 text-sm text-gray-600">{{ site_currency }}{{ ing.cost_price|floatformat:2 }}</td>
+                    <td data-label="Stock" class="px-6 py-4">
+                        <span class="font-bold {% if ing.is_low_stock %}text-red-600{% else %}text-gray-800{% endif %}">{{ ing.stock_quantity|floatformat:2 }}</span>
+                        {% if ing.is_low_stock %}<span class="ml-1 px-1.5 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded">LOW</span>{% endif %}
+                    </td>
+                    <td data-label="Expiry" class="px-6 py-4 text-sm">
+                        {% if ing.expiry_date %}
+                            <span class="{% if ing.is_expired %}text-red-600 font-bold{% else %}text-gray-600{% endif %}">{{ ing.expiry_date|date:"M d, Y" }}</span>
+                            {% if ing.is_expired %}<span class="block text-[10px] text-red-500">Expired</span>{% endif %}
+                        {% else %}<span class="text-gray-400">—</span>{% endif %}
+                    </td>
+                    <td data-label="Status" class="px-6 py-4">
+                        {% if ing.is_low_stock %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">Restock</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">OK</span>
+                        {% endif %}
+                    </td>
+                    <td class="rtable-actions px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url 'restock_ingredient' ing.id %}" class="px-3 py-1.5 bg-green-50 text-green-600 text-xs font-bold rounded hover:bg-green-100">Restock</a>
+                            <a href="{% url 'edit_ingredient' ing.id %}" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</a>
+                            <a href="{% url 'delete_ingredient' ing.id %}" onclick="return confirm('Delete {{ ing.name }}?');" class="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100">Delete</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="p-10 text-center text-gray-500">No ingredients yet. Add your first ingredient or import a CSV.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'common/_pagination.html' %}
+</div>
+{% endblock %}

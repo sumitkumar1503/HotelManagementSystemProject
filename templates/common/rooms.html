@@ -12,14 +12,8 @@
     {% for room in rooms %}
     <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden hover:shadow-xl transition duration-300 flex flex-col">
         <div class="relative h-64">
-            {% if room.room_image %}
-                <img src="{{ room.room_image.url }}" class="w-full h-full object-cover">
-            {% else %}
-                <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
-                    <i class="fa-solid fa-bed text-4xl"></i>
-                </div>
-            {% endif %}
-            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+            {% include 'common/_room_carousel.html' %}
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 pointer-events-none">
                 <h3 class="text-white text-xl font-bold">{{ room.get_room_type_display }}</h3>
                 {% if room.branch %}<p class="text-white/80 text-xs font-semibold"><i class="fa-solid fa-location-dot mr-1"></i>{{ room.branch.name }}</p>{% endif %}
             </div>
@@ -74,4 +68,5 @@
     {% endfor %}
 </div>
 
+{% include 'common/_room_carousel_js.html' %}
 {% endblock %}

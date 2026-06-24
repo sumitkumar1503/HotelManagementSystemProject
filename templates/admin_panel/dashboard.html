@@ -22,11 +22,20 @@
                 Live System Metrics • HotelOS v2.0
             </p>
         </div>
-        <div class="flex gap-3">
-            <button class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 hover:border-blue-500/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition text-slate-300 flex items-center gap-2">
-                <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i> Last 7 Days
+        <div class="relative">
+            <button type="button" id="rangeBtn" onclick="document.getElementById('rangeMenu').classList.toggle('hidden')"
+                class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 hover:border-blue-500/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition text-slate-300 flex items-center gap-2">
+                <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i> {{ range_label }}
+                <i data-lucide="chevron-down" class="w-4 h-4"></i>
             </button>
-           
+            <div id="rangeMenu" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-20 overflow-hidden">
+                {% for key, label in range_options %}
+                <a href="?range={{ key }}"
+                   class="block px-4 py-2 text-sm {% if key == selected_range %}bg-blue-600 text-white{% else %}text-slate-300 hover:bg-slate-700{% endif %}">
+                    {{ label }}
+                </a>
+                {% endfor %}
+            </div>
         </div>
     </div>
 

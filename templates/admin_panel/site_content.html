@@ -1,0 +1,87 @@
+{% extends 'admin_panel/adminbase.html' %}
+{% block title %}Website Content{% endblock %}
+{% block admin_content %}
+<div class="max-w-3xl mx-auto">
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">Website Content</h2>
+    <p class="text-gray-500 mb-6">Edit the Home page hero and the About Us page shown on the booking website.</p>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-8">
+        {% csrf_token %}
+        {% if form.errors %}<div class="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{{ form.errors }}</div>{% endif %}
+
+        <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-4">
+            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="home" class="w-5 h-5 text-blue-500"></i> Home Page Hero</h3>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Hero Title</label>
+                {{ form.home_hero_title }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Hero Subtitle</label>
+                {{ form.home_hero_subtitle }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Hero Background Image</label>
+                {% if settings.home_hero_image %}<img src="{{ settings.home_hero_image.url }}" class="h-24 rounded-lg mb-2 object-cover">{% endif %}
+                {{ form.home_hero_image }}
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-4">
+            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="info" class="w-5 h-5 text-purple-500"></i> About Us Page</h3>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">About Hero Title</label>
+                {{ form.about_hero_title }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">About Hero Subtitle</label>
+                {{ form.about_hero_subtitle }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">About Hero Background Image</label>
+                {% if settings.about_hero_image %}<img src="{{ settings.about_hero_image.url }}" class="h-24 rounded-lg mb-2 object-cover">{% endif %}
+                {{ form.about_hero_image }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Section Heading</label>
+                {{ form.about_heading }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Section Body</label>
+                {{ form.about_body }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Section Image</label>
+                {% if settings.about_image %}<img src="{{ settings.about_image.url }}" class="h-24 rounded-lg mb-2 object-cover">{% endif %}
+                {{ form.about_image }}
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-4">
+            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="map-pin" class="w-5 h-5 text-emerald-500"></i> Location & Contact</h3>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Google Maps Embed URL</label>
+                {{ form.about_map_embed }}
+                <p class="text-xs text-gray-400 mt-1">On Google Maps: Share → Embed a map → copy the <code>src="..."</code> URL from the iframe and paste it here.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Contact Address</label>
+                {{ form.contact_address }}
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Contact Phone</label>
+                    {{ form.contact_phone }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Contact Email</label>
+                    {{ form.contact_email }}
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <button type="submit" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition">Save Content</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

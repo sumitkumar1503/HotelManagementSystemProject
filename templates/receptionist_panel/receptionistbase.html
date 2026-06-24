@@ -49,6 +49,9 @@
       <a href="{% url 'receptionist_guest_list' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'receptionist_guest_list' %}active{% endif %}">
         <i data-lucide="users" class="w-5 h-5 mr-3"></i> Guest List
       </a>
+      <a href="{% url 'laundry_monitor' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'laundry_monitor' %}active{% endif %}">
+        <i data-lucide="washing-machine" class="w-5 h-5 mr-3"></i> Laundry Orders
+      </a>
       <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
         <i data-lucide="mail" class="w-5 h-5 mr-3"></i> Messages
         {% if unread_messages %}<span class="ml-auto bg-purple-400 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
@@ -86,12 +89,17 @@
 
   <!-- Main -->
   <main class="flex-1 md:ml-64 p-4 md:p-8">
-    <!-- Mobile top bar -->
-    <div class="md:hidden flex items-center gap-3 mb-6">
-      <button id="menu-button" class="p-2 rounded-lg bg-white shadow border border-gray-200 text-purple-700">
-        <i data-lucide="menu" class="w-6 h-6"></i>
-      </button>
-      <span class="font-bold text-gray-800">Front Desk</span>
+    <!-- Top bar -->
+    <div class="flex items-center justify-between gap-3 mb-6">
+      <div class="flex items-center gap-3">
+        <button id="menu-button" class="md:hidden p-2 rounded-lg bg-white shadow border border-gray-200 text-purple-700">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <span class="font-bold text-gray-800">Front Desk</span>
+      </div>
+      <div class="text-gray-700">
+        {% include 'common/_notification_bell.html' %}
+      </div>
     </div>
     {% if messages %}
         <div class="mb-6">

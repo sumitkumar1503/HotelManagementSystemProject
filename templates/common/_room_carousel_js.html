@@ -1,0 +1,34 @@
+<script>
+(function () {
+  document.querySelectorAll('[data-carousel]').forEach(function (car) {
+    var track = car.querySelector('[data-track]');
+    if (!track) return;
+    var slides = track.children.length;
+    if (slides <= 1) return;
+    var idx = 0;
+    var dotsWrap = car.querySelector('[data-dots]');
+    var dots = [];
+    function go(i) {
+      idx = (i + slides) % slides;
+      track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+      dots.forEach(function (d, k) {
+        d.className = 'w-2 h-2 rounded-full ' + (k === idx ? 'bg-white' : 'bg-white/50');
+      });
+    }
+    if (dotsWrap) {
+      for (var i = 0; i < slides; i++) {
+        var d = document.createElement('span');
+        d.className = 'w-2 h-2 rounded-full bg-white/50';
+        (function (k) { d.addEventListener('click', function (e) { e.preventDefault(); go(k); }); })(i);
+        dotsWrap.appendChild(d);
+        dots.push(d);
+      }
+    }
+    var prev = car.querySelector('[data-prev]');
+    var next = car.querySelector('[data-next]');
+    if (prev) prev.addEventListener('click', function (e) { e.preventDefault(); go(idx - 1); });
+    if (next) next.addEventListener('click', function (e) { e.preventDefault(); go(idx + 1); });
+    go(0);
+  });
+})();
+</script>

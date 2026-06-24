@@ -354,6 +354,10 @@ class Drink(models.Model):
                                      help_text="Purchase/cost price used for profit calculation.")
     image = models.ImageField(upload_to='drink_images/', blank=True, null=True)
     stock_quantity = models.PositiveIntegerField(default=0)
+    low_stock_threshold = models.PositiveIntegerField(default=5,
+                                                      help_text="Alert when stock falls to or below this level.")
+    expiry_date = models.DateField(null=True, blank=True,
+                                   help_text="Used for product expiration alerts.")
     is_available = models.BooleanField(default=True)
     branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='drinks')
 
@@ -363,6 +367,24 @@ class Drink(models.Model):
     @property
     def in_stock(self):
         return self.stock_quantity > 0
+
+    @property
+    def is_low_stock(self):
+        return self.stock_quantity <= (self.low_stock_threshold or 0)
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return bool(self.expiry_date and self.expiry_date < timezone.now().date())
+
+    @property
+    def is_expiring_soon(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        if not self.expiry_date:
+            return False
+        today = timezone.now().date()
+        return today <= self.expiry_date <= today + timedelta(days=7)
 
     @property
     def profit_per_unit(self):
@@ -467,6 +489,26 @@ class SiteSetting(models.Model):
     currency_code = models.CharField(max_length=5, default="USD")
     vat_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00,
                                           help_text="VAT % applied to rooms and products.")
+
+    # ---- Editable Home page content (hero) ----
+    home_hero_title = models.CharField(max_length=150, blank=True, default="Welcome to Grand Hotel")
+    home_hero_subtitle = models.TextField(blank=True, default="Experience luxury, comfort, and world-class service. Book your perfect getaway today.")
+    home_hero_image = models.ImageField(upload_to='site/', blank=True, null=True,
+                                        help_text="Background image for the homepage hero section.")
+
+    # ---- Editable About Us page content ----
+    about_hero_title = models.CharField(max_length=150, blank=True, default="About Us")
+    about_hero_subtitle = models.TextField(blank=True, default="Redefining luxury and hospitality. Experience world-class comfort in the heart of the city.")
+    about_hero_image = models.ImageField(upload_to='site/', blank=True, null=True)
+    about_heading = models.CharField(max_length=150, blank=True, default="A Legacy of Luxury")
+    about_body = models.TextField(blank=True, default="Our hotel started with a simple vision: to create a sanctuary of peace and luxury for travelers.")
+    about_image = models.ImageField(upload_to='site/', blank=True, null=True)
+    about_map_embed = models.TextField(blank=True,
+                                       help_text="Google Maps embed link (the src URL of the iframe) for the hotel location.")
+    contact_address = models.TextField(blank=True, default="")
+    contact_phone = models.CharField(max_length=30, blank=True, default="")
+    contact_email = models.EmailField(blank=True, default="")
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -515,3 +557,184 @@ class Expense(models.Model):
 
     def __str__(self):
         return f"{self.get_category_display()} - {self.amount} ({self.spent_on})"
+
+
+# ---------------------------------------------------------------------------
+# ROOM IMAGE GALLERY (multiple images per room -> carousel)
+# ---------------------------------------------------------------------------
+class RoomImage(models.Model):
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='gallery')
+    image = models.ImageField(upload_to='room_images/')
+    caption = models.CharField(max_length=120, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['sort_order', 'id']
+
+    def __str__(self):
+        return f"Image for Room {self.room.room_number}"
+
+
+# ---------------------------------------------------------------------------
+# KITCHEN INGREDIENT INVENTORY
+# ---------------------------------------------------------------------------
+class Ingredient(models.Model):
+    UNIT_CHOICES = [
+        ('kg', 'Kilogram'),
+        ('g', 'Gram'),
+        ('l', 'Litre'),
+        ('ml', 'Millilitre'),
+        ('pcs', 'Pieces'),
+        ('pack', 'Pack'),
+        ('dozen', 'Dozen'),
+    ]
+    name = models.CharField(max_length=100)
+    unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='pcs')
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00,
+                                     help_text="Cost per unit (for accounting).")
+    stock_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    low_stock_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=5,
+                                              help_text="Alert when stock falls to or below this level.")
+    expiry_date = models.DateField(null=True, blank=True)
+    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='ingredients')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.stock_quantity} {self.unit})"
+
+    @property
+    def is_low_stock(self):
+        return self.stock_quantity <= (self.low_stock_threshold or 0)
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return bool(self.expiry_date and self.expiry_date < timezone.now().date())
+
+
+class IngredientStockTransaction(models.Model):
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name='stock_transactions')
+    quantity = models.DecimalField(max_digits=10, decimal_places=2,
+                                   help_text="Positive for restock, negative for usage/adjustment")
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.ingredient.name}: {self.quantity:+}"
+
+
+# ---------------------------------------------------------------------------
+# LAUNDRY MODULE
+# ---------------------------------------------------------------------------
+class LaundryService(models.Model):
+    SERVICE_CHOICES = [
+        ('wash', 'Wash'),
+        ('iron', 'Iron'),
+        ('starch', 'Starch'),
+        ('dryclean', 'Dry Clean'),
+        ('sewing', 'Sewing'),
+        ('fold', 'Fold & Pack'),
+    ]
+    name = models.CharField(max_length=100)
+    service_type = models.CharField(max_length=20, choices=SERVICE_CHOICES, default='wash')
+    price = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+    cost_price = models.DecimalField(max_digits=8, decimal_places=2, default=0.00,
+                                     help_text="Cost to the hotel (for profit calculation).")
+    description = models.CharField(max_length=200, blank=True)
+    is_available = models.BooleanField(default=True)
+    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='laundry_services')
+
+    class Meta:
+        ordering = ['service_type', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_service_type_display()})"
+
+    @property
+    def profit_per_unit(self):
+        return (self.price or 0) - (self.cost_price or 0)
+
+
+class LaundryOrder(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('ready', 'Ready'),
+        ('delivered', 'Delivered'),
+    ]
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='laundry_orders')
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    is_paid = models.BooleanField(default=False)
+    note = models.CharField(max_length=255, blank=True)
+    handled_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='laundry_orders')
+    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='laundry_orders')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Laundry Order #{self.id} - Room {self.booking.room.room_number}"
+
+
+class LaundryOrderItem(models.Model):
+    order = models.ForeignKey(LaundryOrder, on_delete=models.CASCADE, related_name='items')
+    service = models.ForeignKey(LaundryService, on_delete=models.SET_NULL, null=True)
+    quantity = models.PositiveIntegerField(default=1)
+    price = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.service.name if self.service else 'Service'}"
+
+    @property
+    def subtotal(self):
+        return self.quantity * self.price
+
+
+# ---------------------------------------------------------------------------
+# NOTIFICATIONS (bell icon alerts, role-targeted, with sound)
+# ---------------------------------------------------------------------------
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('bar_expiry', 'Bar Product Expiration'),
+        ('low_stock', 'Low Stock / Restock Due'),
+        ('new_booking', 'New Guest Booking'),
+        ('cancel_booking', 'Cancelled Booking'),
+        ('new_message', 'New Message'),
+        ('new_kitchen_order', 'New Kitchen Order'),
+        ('new_bar_order', 'New Bar Order'),
+        ('new_laundry_order', 'New Laundry Order'),
+    ]
+    recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notifications')
+    notif_type = models.CharField(max_length=30, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=150)
+    body = models.CharField(max_length=255, blank=True)
+    link = models.CharField(max_length=255, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_notif_type_display()} -> {self.recipient.username}"
+
+    @property
+    def icon(self):
+        return {
+            'bar_expiry': 'alert-triangle',
+            'low_stock': 'package',
+            'new_booking': 'calendar-plus',
+            'cancel_booking': 'calendar-x',
+            'new_message': 'mail',
+            'new_kitchen_order': 'utensils',
+            'new_bar_order': 'wine',
+            'new_laundry_order': 'shirt',
+        }.get(self.notif_type, 'bell')

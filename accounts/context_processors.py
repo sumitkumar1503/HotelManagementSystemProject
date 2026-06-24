@@ -1,4 +1,4 @@
-from .models import SiteSetting, Message, Branch, Booking
+from .models import SiteSetting, Message, Branch, Booking, Notification
 
 
 def _default_branch():
@@ -100,6 +100,14 @@ def site_globals(request):
             ctx['unread_messages'] = Message.objects.filter(recipient=request.user, is_read=False).count()
         except Exception:
             ctx['unread_messages'] = 0
+
+        # Bell notifications
+        try:
+            ctx['notif_unread'] = Notification.objects.filter(recipient=request.user, is_read=False).count()
+            ctx['recent_notifications'] = list(Notification.objects.filter(recipient=request.user)[:12])
+        except Exception:
+            ctx['notif_unread'] = 0
+            ctx['recent_notifications'] = []
 
         # Active branch (for admin/manager branch switching)
         try:

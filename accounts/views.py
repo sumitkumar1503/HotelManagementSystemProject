@@ -1,4 +1,7 @@
 import json
+import csv
+import io
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone 
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth import login
@@ -9,12 +12,17 @@ from accounts.models import (
     Booking, CleaningLog, CustomUser, Customer, Employee, FoodItem, FoodOrder, Room,
     PaymentSetting, PaymentReceipt, Branch, Wallet, WalletTransaction,
     Drink, BarOrder, BarOrderItem, StockTransaction, Message, SiteSetting, Expense,
+    Ingredient, IngredientStockTransaction, LaundryService, LaundryOrder, LaundryOrderItem,
+    Notification, RoomImage,
 )
 from .forms import (
     BookingForm, CustomerEditForm, CustomerSignUpForm, EmployeeCreationForm, EmployeeEditForm,
     FoodItemForm, RoomForm, WalkInBookingForm, PaymentSettingForm, PaymentReceiptForm,
     DrinkForm, RestockForm, BranchForm, MessageForm, SiteSettingForm, ExpenseForm, WalletCreditForm,
+    IngredientForm, IngredientRestockForm, LaundryServiceForm, RoomImageForm, SiteContentForm,
+    CSVImportForm,
 )
+from . import notifications as notify
 from django.db.models import Q
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -83,7 +91,10 @@ def _annotate_room_availability(rooms):
 def index(request):
     # Feature a few rooms on the homepage (booked rooms stay listed, only hide maintenance).
     featured_rooms = _annotate_room_availability(Room.objects.exclude(room_status='maintenance')[:3])
-    return render(request, 'common/home.html', {'featured_rooms': featured_rooms})
+    return render(request, 'common/home.html', {
+        'featured_rooms': featured_rooms,
+        'cms': SiteSetting.load(),
+    })
 
 def room_list(request):
     # All bookable rooms stay visible even if reserved for some dates (only hide maintenance).
@@ -132,6 +143,13 @@ def book_room(request, room_id):
                 booking.room = room
                 booking.branch = room.branch
                 booking.save()
+                guest_name = request.user.get_full_name() or request.user.username
+                notify.notify_roles(
+                    ['admin', 'manager', 'receptionist'], 'new_booking',
+                    'New guest booking',
+                    f"{guest_name} booked Room {room.room_number} ({booking.check_in:%b %d} – {booking.check_out:%b %d}).",
+                    link='/dashboard/admin/bookings/', branch=room.branch,
+                )
                 messages.success(request, f"Room {room.room_number} reserved! Please complete your payment to confirm the booking.")
                 return redirect('pay_booking', booking_id=booking.id)
     else:
@@ -147,7 +165,7 @@ def book_room(request, room_id):
 
 
 def about_us(request):
-    return render(request, 'common/about.html')
+    return render(request, 'common/about.html', {'cms': SiteSetting.load()})
 
 def register_customer(request):
     if request.method == 'POST':
@@ -207,17 +225,53 @@ from django.db.models import Count, Sum
 def admin_dashboard(request):
     # Scope everything to the active branch when one is selected.
     active = _active_branch(request)
+    scan_inventory_alerts(active)
     bookings_qs = Booking.objects.all()
     rooms_qs = Room.objects.all()
     if active:
         bookings_qs = bookings_qs.filter(branch=active)
         rooms_qs = rooms_qs.filter(branch=active)
 
-    # 1. KPI CARDS DATA
-    total_revenue = bookings_qs.filter(is_paid=True).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    total_bookings = bookings_qs.count()
+    # ---- Date-range filter (Today / 7 / 30 / 90 days / all) ----
+    range_options = [
+        ('today', 'Today'),
+        ('7', 'Last 7 Days'),
+        ('30', 'Last 30 Days'),
+        ('90', 'Last 90 Days'),
+        ('year', 'This Year'),
+        ('all', 'All Time'),
+    ]
+    valid_ranges = {key for key, _ in range_options}
+    selected_range = request.GET.get('range', '7')
+    if selected_range not in valid_ranges:
+        selected_range = '7'
+
+    now = timezone.now()
+    today = now.date()
+    start_dt = None
+    if selected_range == 'today':
+        start_dt = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif selected_range == '7':
+        start_dt = now - timedelta(days=7)
+    elif selected_range == '30':
+        start_dt = now - timedelta(days=30)
+    elif selected_range == '90':
+        start_dt = now - timedelta(days=90)
+    elif selected_range == 'year':
+        start_dt = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    # 'all' -> start_dt stays None
+
+    period_bookings = bookings_qs
+    if start_dt is not None:
+        period_bookings = bookings_qs.filter(created_at__gte=start_dt)
+
+    range_label = dict(range_options)[selected_range]
+
+    # 1. KPI CARDS DATA (respect the selected range)
+    total_revenue = period_bookings.filter(is_paid=True).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    total_bookings = period_bookings.count()
     active_guests = bookings_qs.filter(actual_check_in__isnull=False, actual_check_out__isnull=True).count()
-    
+
     # Calculate Occupancy Rate
     total_rooms = rooms_qs.count()
     occupancy_rate = 0
@@ -225,54 +279,41 @@ def admin_dashboard(request):
         occupied_rooms = rooms_qs.filter(room_status='occupied').count()
         occupancy_rate = int((occupied_rooms / total_rooms) * 100)
 
-    # 2. CHART DATA: Revenue Trend (Last 7 Days)
-    # Using Daily data is much easier to generate for demos than Monthly
-    last_7_days = timezone.now() - timedelta(days=7)
-    daily_data = bookings_qs.filter(is_paid=True, created_at__gte=last_7_days)\
+    # 2. CHART DATA: Revenue Trend over the selected range
+    trend_start = start_dt if start_dt is not None else (now - timedelta(days=30))
+    daily_data = period_bookings.filter(is_paid=True, created_at__gte=trend_start)\
         .annotate(day=TruncDay('created_at'))\
         .values('day')\
         .annotate(revenue=Sum('total_amount'))\
         .order_by('day')
-    
-    # Process Data
+
     chart_months = []
     chart_revenue = []
-    
     for entry in daily_data:
-        chart_months.append(entry['day'].strftime('%a')) # Mon, Tue, Wed...
+        chart_months.append(entry['day'].strftime('%b %d'))
         chart_revenue.append(float(entry['revenue']))
 
-    # --- DEMO MODE (FOR THUMBNAILS/EMPTY STATES) ---
-    # if not chart_revenue:
-    #     chart_months = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    #     # Generate a nice looking curve
-    #     chart_revenue = [120, 190, 150, 250, 210, 320, 280] 
-
     # 3. CHART DATA: Room Type Popularity
-    room_stats = bookings_qs.values('room__room_type')\
+    room_stats = period_bookings.values('room__room_type')\
         .annotate(count=Count('id'))\
         .order_by('-count')
-    
-    room_labels = [item['room__room_type'].replace('_', ' ').title() for item in room_stats]
-    room_counts = [item['count'] for item in room_stats]
-    
-    # Demo Mode for Room Chart
-    # if total_bookings < 11:
-    #     room_labels = ['Single Room', 'Double Room', 'Executive Suite', 'Deluxe King', 'Family Studio']
-    #     room_counts = [45, 32, 15, 28, 12] # Values that make a nice donut chart
 
+    room_labels = [(item['room__room_type'] or 'other').replace('_', ' ').title() for item in room_stats]
+    room_counts = [item['count'] for item in room_stats]
 
     context = {
         'total_revenue': total_revenue,
         'total_bookings': total_bookings,
         'active_guests': active_guests,
         'occupancy_rate': occupancy_rate,
-        # JSON dumps for JS
         'chart_months': json.dumps(chart_months),
         'chart_revenue': json.dumps(chart_revenue),
         'chart_room_labels': json.dumps(room_labels),
         'chart_room_counts': json.dumps(room_counts),
         'active_branch': active,
+        'range_options': range_options,
+        'selected_range': selected_range,
+        'range_label': range_label,
     }
     return render(request, 'admin_panel/dashboard.html', context)
 
@@ -801,6 +842,12 @@ def order_food(request):
             messages.success(request, "Order placed successfully! It has been added to your room bill.")
 
         order.save()
+        notify.notify_roles(
+            ['admin', 'manager', 'kitchen'], 'new_kitchen_order',
+            'New kitchen order',
+            f"Room {active_booking.room.room_number} placed a food order ({_money(total)}).",
+            link='/dashboard/kitchen/', branch=active_booking.branch,
+        )
         return redirect('customer_food_history')
 
     return render(request, 'customer_panel/order_food.html', {
@@ -815,6 +862,7 @@ def order_food(request):
 @employee_required(allowed_jobs=['kitchen', 'manager', 'admin'])
 def kitchen_dashboard(request):
     scope = _scope_branch(request)
+    scan_inventory_alerts(scope)
     active_orders = FoodOrder.objects.exclude(status='delivered').order_by('created_at')
     if scope:
         active_orders = active_orders.filter(booking__branch=scope)
@@ -1407,6 +1455,13 @@ def cancel_booking(request, booking_id):
     booking.cancelled_at = timezone.now()
     booking.save()
 
+    guest_name = request.user.get_full_name() or request.user.username
+    notify.notify_roles(
+        ['admin', 'manager', 'receptionist'], 'cancel_booking',
+        'Booking cancelled',
+        f"{guest_name} cancelled their booking for Room {room.room_number}.",
+        link='/dashboard/admin/bookings/', branch=booking.branch,
+    )
     return redirect('customer_bookings')
 
 
@@ -1480,6 +1535,22 @@ def order_drinks(request):
             messages.success(request, "Drink order placed! It has been added to your room bill.")
 
         order.save()
+        notify.notify_roles(
+            ['admin', 'manager', 'bar'], 'new_bar_order',
+            'New bar order',
+            f"Room {active_booking.room.room_number} placed a bar order ({_money(total)}).",
+            link='/dashboard/bar/', branch=active_booking.branch,
+        )
+        # Low-stock alerts triggered by this sale.
+        for it in order.items.select_related('drink'):
+            d = it.drink
+            if d and d.is_low_stock:
+                notify.notify_roles(
+                    ['admin', 'manager', 'bar'], 'low_stock',
+                    f"Low stock: {d.name}",
+                    f"Only {d.stock_quantity} left — due for restock.",
+                    link='/dashboard/bar/inventory/', branch=d.branch,
+                )
         return redirect('customer_bar_history')
 
     return render(request, 'customer_panel/order_drinks.html', {'drinks': drinks, 'room': active_booking.room, 'wallet': wallet})
@@ -1500,6 +1571,7 @@ def customer_bar_history(request):
 @employee_required(allowed_jobs=['bar'])
 def bar_dashboard(request):
     scope = _scope_branch(request)
+    scan_inventory_alerts(scope)
     active_orders = BarOrder.objects.exclude(status='served').prefetch_related('items__drink')
     low_stock = Drink.objects.filter(stock_quantity__lte=5).order_by('stock_quantity')
     if scope:
@@ -1755,6 +1827,7 @@ def compose_message(request):
                 recipient_role = department
                 target_label = dict(Message.DEPARTMENT_CHOICES).get(department, department)
 
+            sender_name = request.user.get_full_name() or request.user.username
             count = 0
             for user in recipients:
                 Message.objects.create(
@@ -1763,6 +1836,12 @@ def compose_message(request):
                     recipient_role=recipient_role,
                     subject=subject,
                     body=body,
+                )
+                notify.notify_user(
+                    user, 'new_message',
+                    f"New message from {sender_name}",
+                    subject or body[:60],
+                    link='/messages/inbox/',
                 )
                 count += 1
 
@@ -1798,6 +1877,11 @@ def reply_message(request, message_id):
             recipient_role='',
             subject=subject,
             body=body,
+        )
+        notify.notify_user(
+            target, 'new_message',
+            f"New message from {request.user.get_full_name() or request.user.username}",
+            subject, link='/messages/inbox/',
         )
         messages.success(request, f"Reply sent to {target.get_full_name() or target.username}.")
     else:
@@ -2062,8 +2146,11 @@ def delete_expense(request, expense_id):
 # ===========================================================================
 # ACCOUNTING & REPORT (Admin + Manager)
 # ===========================================================================
+import calendar as _calendar
+
+
 def _period_range(period):
-    """Return (start_date, end_date, label) for day/week/month/year."""
+    """Return (start_date, end_date, label) for day/week/month/year (relative to today)."""
     today = timezone.now().date()
     if period == 'day':
         return today, today, "Today"
@@ -2075,6 +2162,54 @@ def _period_range(period):
     return today.replace(day=1), today, today.strftime("This Month (%B %Y)")
 
 
+def _resolve_report_range(request):
+    """
+    Work out the (start, end, label) for the accounting report.
+
+    Supports both the quick relative buttons (period=day/week/month/year) and
+    explicit historical selection via ?year=YYYY, ?month=1-12 and ?day=YYYY-MM-DD,
+    so admins/managers can view any previous or current year / month / day.
+    """
+    today = timezone.now().date()
+
+    # 1. Specific day chosen via date picker.
+    day_str = (request.GET.get('day') or '').strip()
+    if day_str:
+        try:
+            d = date.fromisoformat(day_str)
+            return d, d, d.strftime("%d %b %Y")
+        except ValueError:
+            pass
+
+    year_str = (request.GET.get('year') or '').strip()
+    month_str = (request.GET.get('month') or '').strip()
+
+    # 2. Explicit year (and optionally month).
+    if year_str:
+        try:
+            year = int(year_str)
+        except ValueError:
+            year = today.year
+        if month_str:
+            try:
+                month = int(month_str)
+            except ValueError:
+                month = 0
+            if 1 <= month <= 12:
+                last_day = _calendar.monthrange(year, month)[1]
+                start = date(year, month, 1)
+                end = date(year, month, last_day)
+                return start, end, start.strftime("%B %Y")
+        # Whole year
+        return date(year, 1, 1), date(year, 12, 31), f"Year {year}"
+
+    # 3. Fall back to the relative quick buttons.
+    period = request.GET.get('period', 'month')
+    if period not in ('day', 'week', 'month', 'year'):
+        period = 'month'
+    return _period_range(period)
+
+
 @login_required
 def accounting_report(request):
     if not _can_manage_wallet(request.user):
@@ -2084,24 +2219,27 @@ def accounting_report(request):
     period = request.GET.get('period', 'month')
     if period not in ('day', 'week', 'month', 'year'):
         period = 'month'
-    start, end, label = _period_range(period)
+    start, end, label = _resolve_report_range(request)
 
     active = _active_branch(request)
 
     bookings = Booking.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
     food = FoodOrder.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
     bar = BarOrder.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
+    laundry = LaundryOrder.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
     expenses = Expense.objects.filter(spent_on__gte=start, spent_on__lte=end)
 
     if active:
         bookings = bookings.filter(branch=active)
         food = food.filter(booking__branch=active)
         bar = bar.filter(booking__branch=active)
+        laundry = laundry.filter(booking__branch=active)
         expenses = expenses.filter(branch=active)
 
     bookings_total = bookings.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0')
     food_total = food.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')
     bar_total = bar.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')
+    laundry_total = laundry.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')
 
     # Bar gross profit (sale price - cost price) for served/paid items.
     bar_profit = Decimal('0')
@@ -2110,9 +2248,16 @@ def accounting_report(request):
         cost = item.drink.cost_price if item.drink else Decimal('0')
         bar_profit += (item.price - (cost or Decimal('0'))) * item.quantity
 
+    # Laundry gross profit (sale price - cost price).
+    laundry_profit = Decimal('0')
+    laundry_items = LaundryOrderItem.objects.filter(order__in=laundry).select_related('service')
+    for item in laundry_items:
+        cost = item.service.cost_price if item.service else Decimal('0')
+        laundry_profit += (item.price - (cost or Decimal('0'))) * item.quantity
+
     expenses_total = expenses.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
 
-    combined_revenue = bookings_total + food_total + bar_total
+    combined_revenue = bookings_total + food_total + bar_total + laundry_total
     net = combined_revenue - expenses_total
 
     # Expense breakdown by category
@@ -2123,6 +2268,11 @@ def accounting_report(request):
         for c in category_breakdown
     ]
 
+    # Year / month options for the historical selector.
+    current_year = timezone.now().date().year
+    year_choices = list(range(current_year, current_year - 6, -1))
+    month_choices = [(i, date(2000, i, 1).strftime('%B')) for i in range(1, 13)]
+
     context = {
         'period': period,
         'period_label': label,
@@ -2132,6 +2282,8 @@ def accounting_report(request):
         'food_total': _money(food_total),
         'bar_total': _money(bar_total),
         'bar_profit': _money(bar_profit),
+        'laundry_total': _money(laundry_total),
+        'laundry_profit': _money(laundry_profit),
         'combined_revenue': _money(combined_revenue),
         'expenses_total': _money(expenses_total),
         'net': _money(net),
@@ -2140,6 +2292,11 @@ def accounting_report(request):
         'category_breakdown': category_breakdown,
         'active_branch': active,
         'base_template': _panel_base(request),
+        'year_choices': year_choices,
+        'month_choices': month_choices,
+        'sel_year': (request.GET.get('year') or '').strip(),
+        'sel_month': (request.GET.get('month') or '').strip(),
+        'sel_day': (request.GET.get('day') or '').strip(),
     }
     return render(request, 'admin_panel/accounting.html', context)
 
@@ -2185,3 +2342,599 @@ def global_search(request):
         'total': total,
         'base_template': _panel_base(request),
     })
+
+
+# ===========================================================================
+# KITCHEN INGREDIENT INVENTORY
+# ===========================================================================
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def ingredient_inventory(request):
+    active = _scope_branch(request)
+    ingredients = Ingredient.objects.all().order_by('name')
+    if active:
+        ingredients = _branch_menu_filter(ingredients, active)
+    page_obj = paginate(request, ingredients)
+    return render(request, 'kitchen_panel/inventory.html', {
+        'ingredients': page_obj, 'page_obj': page_obj,
+        'active_branch': active, 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def add_ingredient(request):
+    active = _active_branch(request)
+    if request.method == 'POST':
+        form = IngredientForm(request.POST)
+        if form.is_valid():
+            ing = form.save(commit=False)
+            if not ing.branch_id:
+                ing.branch = active or _default_branch()
+            ing.save()
+            messages.success(request, f"Ingredient '{ing.name}' added to inventory.")
+            return redirect('ingredient_inventory')
+    else:
+        form = IngredientForm(initial={'branch': active} if active else None)
+    return render(request, 'kitchen_panel/ingredient_form.html', {
+        'form': form, 'title': 'Add Ingredient', 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def edit_ingredient(request, ingredient_id):
+    ing = get_object_or_404(Ingredient, id=ingredient_id)
+    if request.method == 'POST':
+        form = IngredientForm(request.POST, instance=ing)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{ing.name} updated.")
+            return redirect('ingredient_inventory')
+    else:
+        form = IngredientForm(instance=ing)
+    return render(request, 'kitchen_panel/ingredient_form.html', {
+        'form': form, 'title': 'Edit Ingredient', 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def delete_ingredient(request, ingredient_id):
+    ing = get_object_or_404(Ingredient, id=ingredient_id)
+    name = ing.name
+    ing.delete()
+    messages.success(request, f"{name} removed from inventory.")
+    return redirect('ingredient_inventory')
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def restock_ingredient(request, ingredient_id):
+    ing = get_object_or_404(Ingredient, id=ingredient_id)
+    if request.method == 'POST':
+        form = IngredientRestockForm(request.POST)
+        if form.is_valid():
+            qty = form.cleaned_data['quantity']
+            note = form.cleaned_data['note'] or "Manual restock"
+            ing.stock_quantity += qty
+            ing.save()
+            IngredientStockTransaction.objects.create(ingredient=ing, quantity=qty, note=note)
+            messages.success(request, f"Restocked {qty} {ing.unit} of {ing.name}.")
+            return redirect('ingredient_inventory')
+    else:
+        form = IngredientRestockForm()
+    return render(request, 'kitchen_panel/ingredient_restock.html', {
+        'form': form, 'ingredient': ing, 'base_template': _panel_base(request),
+    })
+
+
+# ===========================================================================
+# CSV IMPORT / EXPORT  (Bar drinks + Kitchen ingredients)
+# ===========================================================================
+DRINK_CSV_HEADERS = ['name', 'category', 'cost_price', 'price', 'stock_quantity',
+                     'low_stock_threshold', 'expiry_date', 'is_available']
+INGREDIENT_CSV_HEADERS = ['name', 'unit', 'cost_price', 'stock_quantity',
+                          'low_stock_threshold', 'expiry_date']
+
+
+def _csv_response(filename, headers, rows):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    writer = csv.writer(response)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(row)
+    return response
+
+
+@login_required
+@employee_required(allowed_jobs=['bar', 'manager'])
+def export_drinks_csv(request):
+    active = _scope_branch(request)
+    drinks = Drink.objects.all().order_by('name')
+    if active:
+        drinks = _branch_menu_filter(drinks, active)
+    rows = [[d.name, d.category, d.cost_price, d.price, d.stock_quantity,
+             d.low_stock_threshold, d.expiry_date or '', 'yes' if d.is_available else 'no']
+            for d in drinks]
+    return _csv_response('bar_products.csv', DRINK_CSV_HEADERS, rows)
+
+
+@login_required
+@employee_required(allowed_jobs=['bar', 'manager'])
+def drink_csv_template(request):
+    sample = [['Coca Cola', 'soft', '0.50', '1.50', '24', '5', '2026-12-31', 'yes']]
+    return _csv_response('bar_products_template.csv', DRINK_CSV_HEADERS, sample)
+
+
+@login_required
+@employee_required(allowed_jobs=['bar', 'manager'])
+def import_drinks_csv(request):
+    active = _active_branch(request)
+    if request.method == 'POST':
+        form = CSVImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            created, updated, errors = _import_drinks(form.cleaned_data['csv_file'],
+                                                       active or _default_branch())
+            messages.success(request, f"Import complete: {created} added, {updated} updated.")
+            if errors:
+                messages.warning(request, f"{len(errors)} row(s) skipped: " + "; ".join(errors[:5]))
+            return redirect('bar_inventory')
+    else:
+        form = CSVImportForm()
+    return render(request, 'admin_panel/csv_import.html', {
+        'form': form,
+        'title': 'Import Bar Products',
+        'template_url': 'drink_csv_template',
+        'cancel_url': 'bar_inventory',
+        'headers': DRINK_CSV_HEADERS,
+        'base_template': _panel_base(request),
+    })
+
+
+def _import_drinks(uploaded_file, branch):
+    created = updated = 0
+    errors = []
+    decoded = io.TextIOWrapper(uploaded_file.file, encoding='utf-8-sig', errors='ignore')
+    reader = csv.DictReader(decoded)
+    for i, row in enumerate(reader, start=2):
+        name = (row.get('name') or '').strip()
+        if not name:
+            continue
+        try:
+            defaults = {
+                'category': (row.get('category') or 'soft').strip() or 'soft',
+                'cost_price': Decimal(str(row.get('cost_price') or '0') or '0'),
+                'price': Decimal(str(row.get('price') or '0') or '0'),
+                'stock_quantity': int(float(row.get('stock_quantity') or 0)),
+                'low_stock_threshold': int(float(row.get('low_stock_threshold') or 5)),
+            }
+            expiry = (row.get('expiry_date') or '').strip()
+            if expiry:
+                defaults['expiry_date'] = date.fromisoformat(expiry)
+            avail = (row.get('is_available') or 'yes').strip().lower()
+            defaults['is_available'] = avail in ('yes', 'true', '1', 'y')
+
+            obj, was_created = Drink.objects.get_or_create(
+                name=name, branch=branch, defaults=defaults)
+            if was_created:
+                created += 1
+            else:
+                for k, v in defaults.items():
+                    setattr(obj, k, v)
+                obj.save()
+                updated += 1
+        except Exception as exc:
+            errors.append(f"row {i}: {exc}")
+    return created, updated, errors
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def export_ingredients_csv(request):
+    active = _scope_branch(request)
+    ingredients = Ingredient.objects.all().order_by('name')
+    if active:
+        ingredients = _branch_menu_filter(ingredients, active)
+    rows = [[i.name, i.unit, i.cost_price, i.stock_quantity, i.low_stock_threshold,
+             i.expiry_date or ''] for i in ingredients]
+    return _csv_response('kitchen_ingredients.csv', INGREDIENT_CSV_HEADERS, rows)
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def ingredient_csv_template(request):
+    sample = [['Tomatoes', 'kg', '1.20', '30', '5', '2026-07-15']]
+    return _csv_response('kitchen_ingredients_template.csv', INGREDIENT_CSV_HEADERS, sample)
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def import_ingredients_csv(request):
+    active = _active_branch(request)
+    if request.method == 'POST':
+        form = CSVImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            created, updated, errors = _import_ingredients(form.cleaned_data['csv_file'],
+                                                           active or _default_branch())
+            messages.success(request, f"Import complete: {created} added, {updated} updated.")
+            if errors:
+                messages.warning(request, f"{len(errors)} row(s) skipped: " + "; ".join(errors[:5]))
+            return redirect('ingredient_inventory')
+    else:
+        form = CSVImportForm()
+    return render(request, 'admin_panel/csv_import.html', {
+        'form': form,
+        'title': 'Import Kitchen Ingredients',
+        'template_url': 'ingredient_csv_template',
+        'cancel_url': 'ingredient_inventory',
+        'headers': INGREDIENT_CSV_HEADERS,
+        'base_template': _panel_base(request),
+    })
+
+
+def _import_ingredients(uploaded_file, branch):
+    created = updated = 0
+    errors = []
+    decoded = io.TextIOWrapper(uploaded_file.file, encoding='utf-8-sig', errors='ignore')
+    reader = csv.DictReader(decoded)
+    for i, row in enumerate(reader, start=2):
+        name = (row.get('name') or '').strip()
+        if not name:
+            continue
+        try:
+            defaults = {
+                'unit': (row.get('unit') or 'pcs').strip() or 'pcs',
+                'cost_price': Decimal(str(row.get('cost_price') or '0') or '0'),
+                'stock_quantity': Decimal(str(row.get('stock_quantity') or '0') or '0'),
+                'low_stock_threshold': Decimal(str(row.get('low_stock_threshold') or '5') or '5'),
+            }
+            expiry = (row.get('expiry_date') or '').strip()
+            if expiry:
+                defaults['expiry_date'] = date.fromisoformat(expiry)
+
+            obj, was_created = Ingredient.objects.get_or_create(
+                name=name, branch=branch, defaults=defaults)
+            if was_created:
+                created += 1
+            else:
+                for k, v in defaults.items():
+                    setattr(obj, k, v)
+                obj.save()
+                updated += 1
+        except Exception as exc:
+            errors.append(f"row {i}: {exc}")
+    return created, updated, errors
+
+
+# ===========================================================================
+# LAUNDRY MODULE
+# ===========================================================================
+@login_required
+@customer_required
+def order_laundry(request):
+    active_booking = _active_booking_for(request.user)
+    if not active_booking:
+        messages.error(request, "You must be checked into a room to order laundry.")
+        return redirect('customer_dashboard')
+
+    services = _branch_menu_filter(LaundryService.objects.filter(is_available=True), active_booking.branch)
+    wallet = _get_wallet(request.user)
+
+    if request.method == 'POST':
+        order = LaundryOrder.objects.create(booking=active_booking, branch=active_booking.branch)
+        subtotal = Decimal('0')
+        any_item = False
+        for s in services:
+            qty = int(request.POST.get(f'qty_{s.id}', 0) or 0)
+            if qty > 0:
+                LaundryOrderItem.objects.create(order=order, service=s, quantity=qty, price=s.price)
+                subtotal += qty * s.price
+                any_item = True
+
+        if not any_item:
+            order.delete()
+            messages.error(request, "Please select at least one laundry service.")
+            return redirect('order_laundry')
+
+        vat_rate, vat_amount, total = _apply_vat(subtotal)
+        order.total_price = total
+
+        if request.POST.get('pay_method') == 'wallet':
+            if wallet.balance >= total:
+                wallet.debit(total, reason=f"Laundry Order #{order.id}")
+                order.is_paid = True
+                messages.success(request, f"Laundry order placed and {_money(total)} paid from your wallet!")
+            else:
+                messages.warning(
+                    request,
+                    f"Insufficient wallet balance ({_money(wallet.balance)}). The order ({_money(total)}) was added to "
+                    f"your room bill — top up your wallet or settle it at checkout."
+                )
+        else:
+            messages.success(request, "Laundry order placed! It has been added to your room bill.")
+
+        order.save()
+        notify.notify_roles(
+            ['admin', 'manager', 'receptionist', 'housekeeping'], 'new_laundry_order',
+            'New laundry order',
+            f"Room {active_booking.room.room_number} placed a laundry order ({_money(total)}).",
+            link='/dashboard/laundry/', branch=active_booking.branch,
+        )
+        return redirect('customer_laundry_history')
+
+    return render(request, 'customer_panel/order_laundry.html', {
+        'services': services, 'room': active_booking.room, 'wallet': wallet,
+    })
+
+
+@login_required
+@customer_required
+def customer_laundry_history(request):
+    orders = LaundryOrder.objects.filter(booking__user=request.user).prefetch_related('items__service').order_by('-created_at')
+    page_obj = paginate(request, orders)
+    return render(request, 'customer_panel/laundry_history.html', {'orders': page_obj, 'page_obj': page_obj})
+
+
+@login_required
+@customer_required
+def pay_laundry_wallet(request, order_id):
+    order = get_object_or_404(LaundryOrder, id=order_id, booking__user=request.user)
+    if order.is_paid:
+        messages.info(request, "This laundry order is already paid.")
+        return redirect('customer_laundry_history')
+    wallet = _get_wallet(request.user)
+    if wallet.balance >= order.total_price:
+        wallet.debit(order.total_price, reason=f"Laundry Order #{order.id}")
+        order.is_paid = True
+        order.save()
+        messages.success(request, f"{_money(order.total_price)} paid from your wallet.")
+    else:
+        messages.error(request, f"Insufficient wallet balance ({_money(wallet.balance)}).")
+    return redirect('customer_laundry_history')
+
+
+@login_required
+@employee_required(allowed_jobs=['housekeeping', 'receptionist', 'manager'])
+def laundry_monitor(request):
+    scope = _scope_branch(request)
+    orders = LaundryOrder.objects.select_related('booking__room', 'booking__user').prefetch_related('items__service').order_by('-created_at')
+    if scope:
+        orders = orders.filter(booking__branch=scope)
+    page_obj = paginate(request, orders)
+    revenue = orders.filter(is_paid=True).aggregate(Sum('total_price'))['total_price__sum'] or 0
+    return render(request, 'housekeeping_panel/laundry_monitor.html', {
+        'orders': page_obj, 'page_obj': page_obj,
+        'revenue': _money(revenue), 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+@employee_required(allowed_jobs=['housekeeping', 'receptionist', 'manager'])
+def update_laundry_status(request, order_id, status):
+    order = get_object_or_404(LaundryOrder, id=order_id)
+    if status in dict(LaundryOrder.STATUS_CHOICES):
+        order.status = status
+        if hasattr(request.user, 'employee_profile'):
+            order.handled_by = request.user.employee_profile
+        order.save()
+        messages.success(request, f"Laundry order #{order.id} marked as {order.get_status_display()}.")
+    return redirect('laundry_monitor')
+
+
+@login_required
+@employee_required(allowed_jobs=['housekeeping', 'receptionist', 'manager'])
+def mark_laundry_paid(request, order_id):
+    order = get_object_or_404(LaundryOrder, id=order_id)
+    order.is_paid = True
+    if hasattr(request.user, 'employee_profile'):
+        order.handled_by = request.user.employee_profile
+    order.save()
+    messages.success(request, f"Laundry order #{order.id} marked as paid.")
+    return redirect('laundry_monitor')
+
+
+# ---- Laundry service menu management (Admin / Manager) ----
+@login_required
+def laundry_services(request):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    active = _scope_branch(request)
+    services = LaundryService.objects.all()
+    if active:
+        services = _branch_menu_filter(services, active)
+    page_obj = paginate(request, services)
+    return render(request, 'admin_panel/laundry_services.html', {
+        'services': page_obj, 'page_obj': page_obj, 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def add_laundry_service(request):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    active = _active_branch(request)
+    if request.method == 'POST':
+        form = LaundryServiceForm(request.POST)
+        if form.is_valid():
+            svc = form.save(commit=False)
+            if not svc.branch_id:
+                svc.branch = active or _default_branch()
+            svc.save()
+            messages.success(request, f"Laundry service '{svc.name}' added.")
+            return redirect('laundry_services')
+    else:
+        form = LaundryServiceForm(initial={'branch': active} if active else None)
+    return render(request, 'admin_panel/laundry_service_form.html', {
+        'form': form, 'title': 'Add Laundry Service', 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def edit_laundry_service(request, service_id):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    svc = get_object_or_404(LaundryService, id=service_id)
+    if request.method == 'POST':
+        form = LaundryServiceForm(request.POST, instance=svc)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{svc.name} updated.")
+            return redirect('laundry_services')
+    else:
+        form = LaundryServiceForm(instance=svc)
+    return render(request, 'admin_panel/laundry_service_form.html', {
+        'form': form, 'title': 'Edit Laundry Service', 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def delete_laundry_service(request, service_id):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    svc = get_object_or_404(LaundryService, id=service_id)
+    name = svc.name
+    svc.delete()
+    messages.success(request, f"{name} removed.")
+    return redirect('laundry_services')
+
+
+# ===========================================================================
+# ROOM IMAGE GALLERY
+# ===========================================================================
+@login_required
+@admin_required
+def manage_room_images(request, room_id):
+    room = get_object_or_404(Room, id=room_id)
+    if request.method == 'POST':
+        form = RoomImageForm(request.POST, request.FILES)
+        if form.is_valid():
+            img = form.save(commit=False)
+            img.room = room
+            img.save()
+            messages.success(request, "Image added to the room gallery.")
+            return redirect('manage_room_images', room_id=room.id)
+    else:
+        form = RoomImageForm()
+    return render(request, 'admin_panel/room_images.html', {
+        'room': room, 'form': form, 'images': room.gallery.all(),
+        'base_template': _panel_base(request),
+    })
+
+
+@login_required
+@admin_required
+def delete_room_image(request, image_id):
+    img = get_object_or_404(RoomImage, id=image_id)
+    room_id = img.room_id
+    img.delete()
+    messages.success(request, "Image removed from gallery.")
+    return redirect('manage_room_images', room_id=room_id)
+
+
+# ===========================================================================
+# CMS: editable Home + About Us content
+# ===========================================================================
+@login_required
+@admin_required
+def site_content(request):
+    settings_obj = SiteSetting.load()
+    if request.method == 'POST':
+        form = SiteContentForm(request.POST, request.FILES, instance=settings_obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Home & About page content updated.")
+            return redirect('site_content')
+    else:
+        form = SiteContentForm(instance=settings_obj)
+    return render(request, 'admin_panel/site_content.html', {'form': form, 'settings': settings_obj})
+
+
+# ===========================================================================
+# NOTIFICATIONS (bell icon)
+# ===========================================================================
+@login_required
+def notifications_feed(request):
+    """JSON feed used by the bell icon to poll + play a sound on new alerts."""
+    qs = Notification.objects.filter(recipient=request.user)
+    unread = qs.filter(is_read=False)
+    data = [{
+        'id': n.id,
+        'type': n.notif_type,
+        'title': n.title,
+        'body': n.body,
+        'link': n.link,
+        'icon': n.icon,
+        'is_read': n.is_read,
+        'ago': timezone.localtime(n.created_at).strftime('%b %d, %H:%M'),
+    } for n in qs[:15]]
+    return JsonResponse({'unread': unread.count(), 'items': data})
+
+
+@login_required
+def notifications_page(request):
+    qs = Notification.objects.filter(recipient=request.user)
+    page_obj = paginate(request, qs, per_page=20)
+    return render(request, 'common/notifications.html', {
+        'notifications': page_obj, 'page_obj': page_obj,
+        'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def mark_notifications_read(request):
+    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True})
+    return redirect('notifications_page')
+
+
+@login_required
+def open_notification(request, notif_id):
+    n = get_object_or_404(Notification, id=notif_id, recipient=request.user)
+    n.is_read = True
+    n.save()
+    return redirect(n.link or 'notifications_page')
+
+
+def scan_inventory_alerts(branch=None):
+    """
+    Generate expiration + low-stock alerts for bar drinks and kitchen ingredients.
+    De-duplicated so the same unread alert isn't created repeatedly. Safe to call
+    on dashboard loads.
+    """
+    drinks = Drink.objects.all()
+    ingredients = Ingredient.objects.all()
+    if branch is not None:
+        drinks = _branch_menu_filter(drinks, branch)
+        ingredients = _branch_menu_filter(ingredients, branch)
+
+    for d in drinks:
+        if d.is_expired:
+            notify.notify_roles(['admin', 'manager', 'bar'], 'bar_expiry',
+                                f"Expired: {d.name}",
+                                f"{d.name} expired on {d.expiry_date:%b %d, %Y}.",
+                                link='/dashboard/bar/inventory/', branch=d.branch, dedupe=True)
+        elif d.is_expiring_soon:
+            notify.notify_roles(['admin', 'manager', 'bar'], 'bar_expiry',
+                                f"Expiring soon: {d.name}",
+                                f"{d.name} expires on {d.expiry_date:%b %d, %Y}.",
+                                link='/dashboard/bar/inventory/', branch=d.branch, dedupe=True)
+        if d.is_low_stock:
+            notify.notify_roles(['admin', 'manager', 'bar'], 'low_stock',
+                                f"Low stock: {d.name}",
+                                f"Only {d.stock_quantity} left — due for restock.",
+                                link='/dashboard/bar/inventory/', branch=d.branch, dedupe=True)
+
+    for ing in ingredients:
+        if ing.is_low_stock:
+            notify.notify_roles(['admin', 'manager', 'kitchen'], 'low_stock',
+                                f"Low stock: {ing.name}",
+                                f"Only {ing.stock_quantity} {ing.unit} left — due for restock.",
+                                link='/dashboard/kitchen/inventory/', branch=ing.branch, dedupe=True)
+        if ing.is_expired:
+            notify.notify_roles(['admin', 'manager', 'kitchen'], 'low_stock',
+                                f"Expired ingredient: {ing.name}",
+                                f"{ing.name} expired on {ing.expiry_date:%b %d, %Y}.",
+                                link='/dashboard/kitchen/inventory/', branch=ing.branch, dedupe=True)

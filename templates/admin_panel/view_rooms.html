@@ -61,6 +61,9 @@
                     <a href="{% url 'edit_room' room.id %}" class="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg text-center font-medium hover:bg-blue-100 transition">
                         Edit
                     </a>
+                    <a href="{% url 'manage_room_images' room.id %}" class="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition" title="Manage image gallery">
+                        <i data-lucide="images" class="w-5 h-5"></i>
+                    </a>
                     <button onclick="confirmDeleteRoom({{ room.id }}, '{{ room.room_number }}')" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
                         <i data-lucide="trash-2" class="w-5 h-5"></i>
                     </button>

@@ -43,6 +43,15 @@
       <a href="{% url 'bar_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'bar_inventory' %}active{% endif %}">
         <i data-lucide="package" class="w-5 h-5 mr-3"></i> Bar Inventory
       </a>
+      <a href="{% url 'ingredient_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'ingredient' in request.resolver_match.url_name %}active{% endif %}">
+        <i data-lucide="carrot" class="w-5 h-5 mr-3"></i> Kitchen Inventory
+      </a>
+      <a href="{% url 'laundry_monitor' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'laundry_monitor' %}active{% endif %}">
+        <i data-lucide="washing-machine" class="w-5 h-5 mr-3"></i> Laundry Orders
+      </a>
+      <a href="{% url 'laundry_services' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'laundry_service' in request.resolver_match.url_name %}active{% endif %}">
+        <i data-lucide="shirt" class="w-5 h-5 mr-3"></i> Laundry Services
+      </a>
       <a href="{% url 'expense_list' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'expense' in request.resolver_match.url_name %}active{% endif %}">
         <i data-lucide="trending-down" class="w-5 h-5 mr-3"></i> Expenses
       </a>
@@ -82,12 +91,17 @@
   <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
 
   <main class="flex-1 md:ml-64 p-4 md:p-8">
-    <!-- Mobile top bar -->
-    <div class="md:hidden flex items-center gap-3 mb-6">
-      <button id="menu-button" class="p-2 rounded-lg bg-white shadow border border-gray-200 text-emerald-700">
-        <i data-lucide="menu" class="w-6 h-6"></i>
-      </button>
-      <span class="font-bold text-gray-800">Manager</span>
+    <!-- Top bar -->
+    <div class="flex items-center justify-between gap-3 mb-6">
+      <div class="flex items-center gap-3">
+        <button id="menu-button" class="md:hidden p-2 rounded-lg bg-white shadow border border-gray-200 text-emerald-700">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <span class="font-bold text-gray-800">Manager</span>
+      </div>
+      <div class="text-gray-700">
+        {% include 'common/_notification_bell.html' %}
+      </div>
     </div>
     {% if messages %}
         <div class="mb-6">

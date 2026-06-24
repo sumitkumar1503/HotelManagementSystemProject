@@ -1,0 +1,53 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Room {{ room.room_number }} Images{% endblock %}
+{% block panel_content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Image Gallery — Room {{ room.room_number }}</h2>
+            <p class="text-gray-500">Upload multiple photos. They appear as a carousel on the booking website.</p>
+        </div>
+        <a href="{% url 'view_rooms' %}" class="px-4 py-2 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition">Back to Rooms</a>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mb-8">
+        <form method="post" enctype="multipart/form-data" class="flex flex-wrap items-end gap-4">
+            {% csrf_token %}
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Image</label>
+                {{ form.image }}
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Caption (optional)</label>
+                {{ form.caption }}
+            </div>
+            <button type="submit" class="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow transition flex items-center gap-2">
+                <i data-lucide="upload" class="w-4 h-4"></i> Add Image
+            </button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {% if room.room_image %}
+        <div class="relative rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+            <img src="{{ room.room_image.url }}" class="w-full h-40 object-cover">
+            <span class="absolute top-2 left-2 px-2 py-0.5 bg-black/60 text-white text-[10px] rounded">Main image</span>
+        </div>
+        {% endif %}
+        {% for img in images %}
+        <div class="relative rounded-xl overflow-hidden border border-gray-200 shadow-sm group">
+            <img src="{{ img.image.url }}" class="w-full h-40 object-cover">
+            {% if img.caption %}<span class="absolute bottom-0 inset-x-0 px-2 py-1 bg-black/60 text-white text-xs truncate">{{ img.caption }}</span>{% endif %}
+            <a href="{% url 'delete_room_image' img.id %}" onclick="return confirm('Delete this image?');"
+               class="absolute top-2 right-2 w-7 h-7 bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+               <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </a>
+        </div>
+        {% empty %}
+        {% if not room.room_image %}
+        <div class="col-span-full p-10 text-center text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">No images yet.</div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

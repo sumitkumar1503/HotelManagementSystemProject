@@ -30,6 +30,11 @@
         <i data-lucide="utensils" class="w-5 h-5 mr-3"></i> Active Orders
       </a>
       
+      <!-- Ingredient Inventory -->
+      <a href="{% url 'ingredient_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'ingredient_inventory' %}active{% endif %}">
+        <i data-lucide="package" class="w-5 h-5 mr-3"></i> Ingredient Inventory
+      </a>
+
       <!-- Sales Record -->
       <a href="{% url 'sales_record' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'sales_record' %}active{% endif %}">
         <i data-lucide="receipt-text" class="w-5 h-5 mr-3"></i> Sales Record
@@ -83,14 +88,15 @@
 
   <!-- Main -->
   <main class="flex-1 md:ml-64 p-4 md:p-8">
-    <!-- Top Bar for Mobile/Context -->
-    <div class="md:hidden mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
+    <!-- Top Bar -->
+    <div class="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
         <div class="flex items-center gap-3">
-            <button id="menu-button" class="text-orange-700"><i data-lucide="menu" class="w-6 h-6"></i></button>
+            <button id="menu-button" class="text-orange-700 md:hidden"><i data-lucide="menu" class="w-6 h-6"></i></button>
             <span class="font-bold text-gray-800">Kitchen</span>
         </div>
-        <div class="flex items-center gap-2">
-             <span class="text-sm">{{ user.username }}</span>
+        <div class="flex items-center gap-4 text-gray-700">
+             {% include 'common/_notification_bell.html' %}
+             <span class="text-sm hidden md:block">{{ user.username }}</span>
         </div>
     </div>
 

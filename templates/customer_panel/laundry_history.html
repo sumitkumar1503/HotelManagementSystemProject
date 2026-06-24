@@ -1,0 +1,52 @@
+{% extends 'customer_panel/customerbase.html' %}
+{% block title %}My Laundry Orders{% endblock %}
+{% block customer_content %}
+<div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">My Laundry Orders</h1>
+
+    <div class="space-y-4">
+        {% for order in orders %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-3">
+                <div>
+                    <span class="font-bold text-gray-800">Order #{{ order.id }}</span>
+                    <span class="text-xs text-gray-400 ml-2">{{ order.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-1 text-xs font-bold rounded
+                        {% if order.status == 'delivered' %}bg-green-100 text-green-700
+                        {% elif order.status == 'ready' %}bg-blue-100 text-blue-700
+                        {% elif order.status == 'processing' %}bg-amber-100 text-amber-700
+                        {% else %}bg-gray-100 text-gray-600{% endif %}">{{ order.get_status_display }}</span>
+                    {% if order.is_paid %}
+                        <span class="px-2 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-700">Paid</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs font-bold rounded bg-red-100 text-red-600">Unpaid</span>
+                    {% endif %}
+                </div>
+            </div>
+            <ul class="text-sm text-gray-600 mb-3">
+                {% for item in order.items.all %}
+                <li class="flex justify-between border-b border-gray-50 py-1">
+                    <span>{{ item.quantity }} × {{ item.service.name|default:"Service" }}</span>
+                    <span>{{ site_currency }}{{ item.subtotal|floatformat:2 }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="flex justify-between items-center">
+                <span class="text-lg font-bold text-indigo-600">Total: {{ site_currency }}{{ order.total_price|floatformat:2 }}</span>
+                {% if not order.is_paid %}
+                <a href="{% url 'pay_laundry_wallet' order.id %}" onclick="return confirm('Pay {{ site_currency }}{{ order.total_price|floatformat:2 }} from your wallet?');"
+                   class="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700">Pay with Wallet</a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center text-gray-500">
+            You haven't placed any laundry orders yet.
+        </div>
+        {% endfor %}
+    </div>
+    {% include 'common/_pagination.html' %}
+</div>
+{% endblock %}

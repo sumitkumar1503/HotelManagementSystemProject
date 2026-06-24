@@ -1,0 +1,114 @@
+{% load static %}
+<div class="relative" id="notifWrap">
+  <button type="button" id="notifBtn" class="relative focus:outline-none" aria-label="Notifications">
+    <i data-lucide="bell" class="w-6 h-6 cursor-pointer hover:text-blue-400 transition"></i>
+    <span id="notifBadge"
+          class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center {% if not notif_unread %}hidden{% endif %}">
+      {{ notif_unread }}
+    </span>
+  </button>
+
+  <div id="notifPanel"
+       class="hidden absolute right-0 mt-3 w-80 max-w-[90vw] bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+      <span class="font-bold text-sm text-gray-700">Notifications</span>
+      <button type="button" id="notifMarkAll" class="text-xs text-blue-600 hover:underline">Mark all read</button>
+    </div>
+    <div id="notifList" class="max-h-96 overflow-y-auto divide-y divide-gray-100">
+      {% for n in recent_notifications %}
+      <a href="{% url 'open_notification' n.id %}"
+         class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition {% if not n.is_read %}bg-blue-50/60{% endif %}">
+        <span class="mt-0.5 text-blue-600"><i data-lucide="{{ n.icon }}" class="w-4 h-4"></i></span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-sm font-semibold text-gray-800 truncate">{{ n.title }}</span>
+          {% if n.body %}<span class="block text-xs text-gray-500 truncate">{{ n.body }}</span>{% endif %}
+          <span class="block text-[10px] text-gray-400 mt-0.5">{{ n.created_at|date:"M d, H:i" }}</span>
+        </span>
+        {% if not n.is_read %}<span class="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></span>{% endif %}
+      </a>
+      {% empty %}
+      <div class="px-4 py-8 text-center text-sm text-gray-400">No notifications yet.</div>
+      {% endfor %}
+    </div>
+    <a href="{% url 'notifications_page' %}" class="block text-center text-xs text-blue-600 hover:underline py-2.5 border-t border-gray-100 bg-gray-50">View all</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  const btn = document.getElementById('notifBtn');
+  const panel = document.getElementById('notifPanel');
+  const badge = document.getElementById('notifBadge');
+  const list = document.getElementById('notifList');
+  const markAll = document.getElementById('notifMarkAll');
+  if (!btn) return;
+
+  let lastUnread = parseInt(badge ? (badge.textContent || '0') : '0', 10) || 0;
+
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      o.start(); o.stop(ctx.currentTime + 0.5);
+    } catch (e) { /* sound not allowed yet */ }
+  }
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    panel.classList.toggle('hidden');
+  });
+  document.addEventListener('click', function (e) {
+    if (!panel.contains(e.target) && !btn.contains(e.target)) panel.classList.add('hidden');
+  });
+
+  function render(items) {
+    if (!list) return;
+    if (!items.length) {
+      list.innerHTML = '<div class="px-4 py-8 text-center text-sm text-gray-400">No notifications yet.</div>';
+      return;
+    }
+    list.innerHTML = items.map(function (n) {
+      return '<a href="/notifications/open/' + n.id + '/" class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition ' + (n.is_read ? '' : 'bg-blue-50/60') + '">' +
+        '<span class="mt-0.5 text-blue-600"><i data-lucide="' + n.icon + '" class="w-4 h-4"></i></span>' +
+        '<span class="flex-1 min-w-0">' +
+          '<span class="block text-sm font-semibold text-gray-800 truncate">' + n.title + '</span>' +
+          (n.body ? '<span class="block text-xs text-gray-500 truncate">' + n.body + '</span>' : '') +
+          '<span class="block text-[10px] text-gray-400 mt-0.5">' + n.ago + '</span>' +
+        '</span>' +
+        (n.is_read ? '' : '<span class="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></span>') +
+      '</a>';
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function poll() {
+    fetch('/notifications/feed/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (badge) {
+          if (d.unread > 0) { badge.textContent = d.unread; badge.classList.remove('hidden'); }
+          else { badge.classList.add('hidden'); }
+        }
+        if (d.unread > lastUnread) beep();
+        lastUnread = d.unread;
+        render(d.items || []);
+      })
+      .catch(function () {});
+  }
+
+  if (markAll) {
+    markAll.addEventListener('click', function () {
+      fetch('/notifications/read-all/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function () { lastUnread = 0; poll(); });
+    });
+  }
+
+  setInterval(poll, 20000);
+})();
+</script>

@@ -89,6 +89,16 @@
         <span>Bar Orders</span>
       </a>
 
+      <a href="{% url 'order_laundry' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'order_laundry' %}active{% endif %}">
+        <i data-lucide="shirt" class="w-5 h-5 mr-4"></i>
+        <span>Order Laundry</span>
+      </a>
+
+      <a href="{% url 'customer_laundry_history' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_laundry_history' %}active{% endif %}">
+        <i data-lucide="washing-machine" class="w-5 h-5 mr-4"></i>
+        <span>Laundry Orders</span>
+      </a>
+
       <a href="{% url 'customer_wallet' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_wallet' %}active{% endif %}">
         <i data-lucide="wallet" class="w-5 h-5 mr-4"></i>
         <span>Credit Wallet</span>
@@ -136,6 +146,7 @@
       </div>
       
       <div class="flex items-center space-x-4">
+        {% include 'common/_notification_bell.html' %}
         <div class="flex flex-col text-right mr-2 hidden md:block">
             <span class="text-sm font-semibold">{{ user.get_full_name|default:user.username }}</span>
         </div>

@@ -49,7 +49,45 @@ urlpatterns = [
     # Admin Payment Settings
     path('dashboard/admin/payment-settings/', views.payment_settings, name='payment_settings'),
     path('dashboard/admin/site-settings/', views.site_settings, name='site_settings'),
+    path('dashboard/admin/site-content/', views.site_content, name='site_content'),
     path('dashboard/admin/guests/<int:guest_id>/add-credit/', views.add_wallet_credit, name='add_wallet_credit'),
+
+    # Room image gallery (Admin)
+    path('dashboard/admin/rooms/<int:room_id>/images/', views.manage_room_images, name='manage_room_images'),
+    path('dashboard/admin/rooms/images/delete/<int:image_id>/', views.delete_room_image, name='delete_room_image'),
+
+    # Kitchen ingredient inventory
+    path('dashboard/kitchen/inventory/', views.ingredient_inventory, name='ingredient_inventory'),
+    path('dashboard/kitchen/inventory/add/', views.add_ingredient, name='add_ingredient'),
+    path('dashboard/kitchen/inventory/edit/<int:ingredient_id>/', views.edit_ingredient, name='edit_ingredient'),
+    path('dashboard/kitchen/inventory/delete/<int:ingredient_id>/', views.delete_ingredient, name='delete_ingredient'),
+    path('dashboard/kitchen/inventory/restock/<int:ingredient_id>/', views.restock_ingredient, name='restock_ingredient'),
+    path('dashboard/kitchen/inventory/export/', views.export_ingredients_csv, name='export_ingredients_csv'),
+    path('dashboard/kitchen/inventory/template/', views.ingredient_csv_template, name='ingredient_csv_template'),
+    path('dashboard/kitchen/inventory/import/', views.import_ingredients_csv, name='import_ingredients_csv'),
+
+    # Bar CSV import/export
+    path('dashboard/bar/inventory/export/', views.export_drinks_csv, name='export_drinks_csv'),
+    path('dashboard/bar/inventory/template/', views.drink_csv_template, name='drink_csv_template'),
+    path('dashboard/bar/inventory/import/', views.import_drinks_csv, name='import_drinks_csv'),
+
+    # Laundry module
+    path('dashboard/customer/order-laundry/', views.order_laundry, name='order_laundry'),
+    path('dashboard/customer/laundry-orders/', views.customer_laundry_history, name='customer_laundry_history'),
+    path('dashboard/customer/laundry/pay/<int:order_id>/', views.pay_laundry_wallet, name='pay_laundry_wallet'),
+    path('dashboard/laundry/', views.laundry_monitor, name='laundry_monitor'),
+    path('dashboard/laundry/status/<int:order_id>/<str:status>/', views.update_laundry_status, name='update_laundry_status'),
+    path('dashboard/laundry/paid/<int:order_id>/', views.mark_laundry_paid, name='mark_laundry_paid'),
+    path('dashboard/admin/laundry-services/', views.laundry_services, name='laundry_services'),
+    path('dashboard/admin/laundry-services/add/', views.add_laundry_service, name='add_laundry_service'),
+    path('dashboard/admin/laundry-services/edit/<int:service_id>/', views.edit_laundry_service, name='edit_laundry_service'),
+    path('dashboard/admin/laundry-services/delete/<int:service_id>/', views.delete_laundry_service, name='delete_laundry_service'),
+
+    # Notifications
+    path('notifications/', views.notifications_page, name='notifications_page'),
+    path('notifications/feed/', views.notifications_feed, name='notifications_feed'),
+    path('notifications/read-all/', views.mark_notifications_read, name='mark_notifications_read'),
+    path('notifications/open/<int:notif_id>/', views.open_notification, name='open_notification'),
 
     # Expenses (Admin + Manager)
     path('dashboard/expenses/', views.expense_list, name='expense_list'),
@@ -127,3 +165,12 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # Serve uploaded media (hotel/branch logos, room & food images) even in
+    # production. Hosts like PythonAnywhere don't serve /media/ by default, which
+    # is why uploaded logos/images were not appearing on the dashboard/website.
+    from django.urls import re_path
+    from django.views.static import serve as _media_serve
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', _media_serve, {'document_root': settings.MEDIA_ROOT}),
+    ]

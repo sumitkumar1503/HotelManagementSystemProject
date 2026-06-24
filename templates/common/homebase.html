@@ -6,6 +6,7 @@
     <title>Hotel Management System</title>
     <!-- Tailwind CSS for modern styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -81,6 +82,8 @@
                         {% endif %}
                     {% endif %}
 
+                    {% include 'common/_notification_bell.html' %}
+
                     <a href="{% url 'inbox' %}" class="text-gray-200 hover:text-white transition" title="Messages">
                         <i class="fa-solid fa-envelope"></i>{% if unread_messages %} <span class="text-xs bg-pink-500 px-1.5 rounded-full">{{ unread_messages }}</span>{% endif %}
                     </a>
@@ -121,6 +124,7 @@
     </footer>
 
     <script>
+      if (window.lucide) lucide.createIcons();
       (function () {
         var btn = document.getElementById('home-menu-btn');
         var menu = document.getElementById('home-nav-links');

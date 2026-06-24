@@ -1,0 +1,28 @@
+{# Room image gallery carousel. Expects `room` in context. #}
+{% with gallery=room.gallery.all %}
+<div class="room-carousel relative h-full w-full overflow-hidden" data-carousel>
+    <div class="carousel-track flex h-full transition-transform duration-300 ease-out" data-track>
+        {% if room.room_image %}
+            <img src="{{ room.room_image.url }}" class="w-full h-full object-cover shrink-0 grow-0 basis-full">
+        {% endif %}
+        {% for img in gallery %}
+            <img src="{{ img.image.url }}" alt="{{ img.caption }}" class="w-full h-full object-cover shrink-0 grow-0 basis-full">
+        {% endfor %}
+        {% if not room.room_image and not gallery %}
+            <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 shrink-0 grow-0 basis-full">
+                <i class="fa-solid fa-bed text-4xl"></i>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if room.room_image and gallery or gallery|length > 1 %}
+    <button type="button" data-prev class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 z-10">
+        <i class="fa-solid fa-chevron-left text-xs"></i>
+    </button>
+    <button type="button" data-next class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 z-10">
+        <i class="fa-solid fa-chevron-right text-xs"></i>
+    </button>
+    <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10" data-dots></div>
+    {% endif %}
+</div>
+{% endwith %}

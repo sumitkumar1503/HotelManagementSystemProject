@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.db import transaction
 from .models import (
     Booking, CustomUser, Customer, Employee, FoodItem, PaymentSetting, PaymentReceipt,
-    Branch, Drink, Message, SiteSetting, Expense,
+    Branch, Drink, Message, SiteSetting, Expense, Ingredient, LaundryService, RoomImage,
 )
 
 
@@ -250,10 +250,13 @@ class PaymentReceiptForm(forms.ModelForm):
 class DrinkForm(forms.ModelForm):
     class Meta:
         model = Drink
-        fields = ['name', 'category', 'cost_price', 'price', 'image', 'stock_quantity', 'is_available', 'branch']
+        fields = ['name', 'category', 'cost_price', 'price', 'image', 'stock_quantity',
+                  'low_stock_threshold', 'expiry_date', 'is_available', 'branch']
         labels = {
             'cost_price': 'Cost Price (what you pay)',
             'price': 'Sale Price (shown to guest)',
+            'low_stock_threshold': 'Low-stock alert level',
+            'expiry_date': 'Expiry date (for expiration alerts)',
         }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
@@ -262,6 +265,8 @@ class DrinkForm(forms.ModelForm):
             'price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
             'image': forms.FileInput(attrs={'class': 'form-input'}),
             'stock_quantity': forms.NumberInput(attrs={'class': 'form-input'}),
+            'low_stock_threshold': forms.NumberInput(attrs={'class': 'form-input'}),
+            'expiry_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
             'is_available': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'branch': forms.Select(attrs={'class': 'form-select'}),
         }
@@ -425,4 +430,103 @@ class WalletCreditForm(forms.Form):
     reason = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Loyalty reward'}),
+    )
+
+
+class IngredientForm(forms.ModelForm):
+    class Meta:
+        model = Ingredient
+        fields = ['name', 'unit', 'cost_price', 'stock_quantity', 'low_stock_threshold',
+                  'expiry_date', 'branch']
+        labels = {
+            'cost_price': 'Cost per unit',
+            'low_stock_threshold': 'Low-stock alert level',
+            'expiry_date': 'Expiry date (optional)',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Rice, Tomatoes'}),
+            'unit': forms.Select(attrs={'class': 'form-select'}),
+            'cost_price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'stock_quantity': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'low_stock_threshold': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'expiry_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'branch': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['branch'].required = False
+
+
+class IngredientRestockForm(forms.Form):
+    quantity = forms.DecimalField(max_digits=10, decimal_places=2, min_value=0.01,
+                                  widget=forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01', 'placeholder': 'Qty to add'}))
+    note = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Supplier / note (optional)'}))
+
+
+class LaundryServiceForm(forms.ModelForm):
+    class Meta:
+        model = LaundryService
+        fields = ['name', 'service_type', 'price', 'cost_price', 'description', 'is_available', 'branch']
+        labels = {
+            'price': 'Price (shown to guest)',
+            'cost_price': 'Cost Price (for profit calc)',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Shirt Wash'}),
+            'service_type': forms.Select(attrs={'class': 'form-select'}),
+            'price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'cost_price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'description': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Optional details'}),
+            'is_available': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'branch': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['branch'].required = False
+
+
+class RoomImageForm(forms.ModelForm):
+    class Meta:
+        model = RoomImage
+        fields = ['image', 'caption']
+        widgets = {
+            'image': forms.FileInput(attrs={'class': 'form-input'}),
+            'caption': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Optional caption (e.g. Bathroom)'}),
+        }
+
+
+class SiteContentForm(forms.ModelForm):
+    """Edit the public Home + About Us page content."""
+    class Meta:
+        model = SiteSetting
+        fields = [
+            'home_hero_title', 'home_hero_subtitle', 'home_hero_image',
+            'about_hero_title', 'about_hero_subtitle', 'about_hero_image',
+            'about_heading', 'about_body', 'about_image', 'about_map_embed',
+            'contact_address', 'contact_phone', 'contact_email',
+        ]
+        widgets = {
+            'home_hero_title': forms.TextInput(attrs={'class': 'form-input'}),
+            'home_hero_subtitle': forms.Textarea(attrs={'class': 'form-input', 'rows': 2}),
+            'home_hero_image': forms.FileInput(attrs={'class': 'form-input'}),
+            'about_hero_title': forms.TextInput(attrs={'class': 'form-input'}),
+            'about_hero_subtitle': forms.Textarea(attrs={'class': 'form-input', 'rows': 2}),
+            'about_hero_image': forms.FileInput(attrs={'class': 'form-input'}),
+            'about_heading': forms.TextInput(attrs={'class': 'form-input'}),
+            'about_body': forms.Textarea(attrs={'class': 'form-input', 'rows': 5}),
+            'about_image': forms.FileInput(attrs={'class': 'form-input'}),
+            'about_map_embed': forms.Textarea(attrs={'class': 'form-input', 'rows': 2,
+                              'placeholder': 'Paste the Google Maps embed src URL'}),
+            'contact_address': forms.Textarea(attrs={'class': 'form-input', 'rows': 2}),
+            'contact_phone': forms.TextInput(attrs={'class': 'form-input'}),
+            'contact_email': forms.EmailInput(attrs={'class': 'form-input'}),
+        }
+
+
+class CSVImportForm(forms.Form):
+    csv_file = forms.FileField(
+        widget=forms.FileInput(attrs={'class': 'form-input', 'accept': '.csv'}),
+        help_text="Upload a CSV using the downloadable template.",
     )
