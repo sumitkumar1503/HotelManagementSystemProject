@@ -89,6 +89,35 @@ urlpatterns = [
     path('notifications/read-all/', views.mark_notifications_read, name='mark_notifications_read'),
     path('notifications/open/<int:notif_id>/', views.open_notification, name='open_notification'),
 
+    # Wallet top-ups (guest -> staff approval)
+    path('dashboard/customer/wallet/reload/', views.wallet_reload, name='wallet_reload'),
+    path('dashboard/wallet/topups/', views.wallet_topup_review, name='wallet_topup_review'),
+    path('dashboard/wallet/topups/<int:topup_id>/', views.wallet_topup_decide, name='wallet_topup_decide'),
+
+    # Product History (Drinks + Ingredients)
+    path('dashboard/bar/inventory/<int:drink_id>/history/', views.drink_history, name='drink_history'),
+    path('dashboard/kitchen/inventory/<int:ingredient_id>/history/', views.ingredient_history, name='ingredient_history'),
+
+    # Kitchen ingredient usage tracker
+    path('dashboard/kitchen/usage/', views.kitchen_usage_list, name='kitchen_usage_list'),
+    path('dashboard/kitchen/usage/add/', views.kitchen_usage_add, name='kitchen_usage_add'),
+    path('dashboard/kitchen/usage/<int:usage_id>/delete/', views.kitchen_usage_delete, name='kitchen_usage_delete'),
+
+    # Spa module (guest order, staff monitor, admin services CRUD)
+    path('dashboard/customer/order-spa/', views.order_spa, name='order_spa'),
+    path('dashboard/customer/spa-orders/', views.customer_spa_history, name='customer_spa_history'),
+    path('dashboard/customer/spa/pay/<int:order_id>/', views.pay_spa_wallet, name='pay_spa_wallet'),
+    path('dashboard/spa/monitor/', views.spa_monitor, name='spa_monitor'),
+    path('dashboard/spa/status/<int:order_id>/<str:status>/', views.update_spa_status, name='update_spa_status'),
+    path('dashboard/spa/paid/<int:order_id>/', views.mark_spa_paid, name='mark_spa_paid'),
+    path('dashboard/admin/spa-services/', views.spa_services, name='spa_services'),
+    path('dashboard/admin/spa-services/add/', views.add_spa_service, name='add_spa_service'),
+    path('dashboard/admin/spa-services/edit/<int:service_id>/', views.edit_spa_service, name='edit_spa_service'),
+    path('dashboard/admin/spa-services/delete/<int:service_id>/', views.delete_spa_service, name='delete_spa_service'),
+
+    # Audit log
+    path('dashboard/audit-log/', views.audit_log_view, name='audit_log'),
+
     # Expenses (Admin + Manager)
     path('dashboard/expenses/', views.expense_list, name='expense_list'),
     path('dashboard/expenses/add/', views.add_expense, name='add_expense'),

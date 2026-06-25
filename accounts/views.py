@@ -14,6 +14,7 @@ from accounts.models import (
     Drink, BarOrder, BarOrderItem, StockTransaction, Message, SiteSetting, Expense,
     Ingredient, IngredientStockTransaction, LaundryService, LaundryOrder, LaundryOrderItem,
     Notification, RoomImage,
+    WalletTopUpReceipt, IngredientUsage, SpaService, SpaOrder, SpaOrderItem, AuditLog,
 )
 from .forms import (
     BookingForm, CustomerEditForm, CustomerSignUpForm, EmployeeCreationForm, EmployeeEditForm,
@@ -21,8 +22,10 @@ from .forms import (
     DrinkForm, RestockForm, BranchForm, MessageForm, SiteSettingForm, ExpenseForm, WalletCreditForm,
     IngredientForm, IngredientRestockForm, LaundryServiceForm, RoomImageForm, SiteContentForm,
     CSVImportForm,
+    WalletTopUpForm, WalletTopUpReviewForm, IngredientUsageForm, SpaServiceForm,
 )
 from . import notifications as notify
+from .audit import log_action
 from django.db.models import Q
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -97,12 +100,45 @@ def index(request):
     })
 
 def room_list(request):
-    # All bookable rooms stay visible even if reserved for some dates (only hide maintenance).
-    rooms = _annotate_room_availability(Room.objects.exclude(room_status='maintenance').order_by('room_number'))
+    # ---- Optional date-range filter (works for both anonymous and logged in users) --
+    qs = Room.objects.exclude(room_status='maintenance').order_by('room_number')
+
+    check_in_str = (request.GET.get('check_in') or '').strip()
+    check_out_str = (request.GET.get('check_out') or '').strip()
+    q_text = (request.GET.get('q') or '').strip()
+    filter_check_in = filter_check_out = None
+    try:
+        if check_in_str:
+            filter_check_in = date.fromisoformat(check_in_str)
+        if check_out_str:
+            filter_check_out = date.fromisoformat(check_out_str)
+    except ValueError:
+        filter_check_in = filter_check_out = None
+
+    # Text search across room number / type / description.
+    if q_text:
+        qs = qs.filter(
+            Q(room_number__icontains=q_text) |
+            Q(room_type__icontains=q_text) |
+            Q(description__icontains=q_text)
+        )
+
+    if filter_check_in and filter_check_out and filter_check_in < filter_check_out:
+        # Restrict to rooms actually available for the requested dates.
+        qs = [r for r in qs if room_is_available(r, filter_check_in, filter_check_out)]
+
+    rooms = _annotate_room_availability(qs)
+    ctx = {
+        'rooms': rooms,
+        'sel_check_in': check_in_str,
+        'sel_check_out': check_out_str,
+        'sel_q': q_text,
+        'filtered': bool(filter_check_in and filter_check_out and filter_check_in < filter_check_out),
+    }
     # Logged-in guests keep their dashboard sidebar while browsing rooms.
     if request.user.is_authenticated and request.user.role == 'customer':
-        return render(request, 'customer_panel/browse_rooms.html', {'rooms': rooms})
-    return render(request, 'common/rooms.html', {'rooms': rooms})
+        return render(request, 'customer_panel/browse_rooms.html', ctx)
+    return render(request, 'common/rooms.html', ctx)
 
 def book_room_placeholder(request, room_id):
     # This is a placeholder until we build the Booking Logic in the next step
@@ -209,6 +245,8 @@ def login_view(request):
                         return redirect('bar_dashboard')
                     elif job == 'manager':
                         return redirect('manager_dashboard')
+                    elif job == 'spa':
+                        return redirect('spa_monitor')
                     else:
                         return redirect('home')
                 except:
@@ -674,9 +712,9 @@ def view_bookings(request):
 def staff_check_in(request, booking_id):
     if request.user.role not in ['admin', 'employee']:
         return redirect('home')
-        
+
     booking = get_object_or_404(Booking, id=booking_id)
-    
+
     if not booking.actual_check_in:
         booking.actual_check_in = timezone.now()
         booking.save()
@@ -685,8 +723,11 @@ def staff_check_in(request, booking_id):
         if room.room_status == 'available':
             room.room_status = 'occupied'
             room.save()
+        log_action(request, action='status', module='Booking',
+                   summary=f"Checked in guest to Room {room.room_number}",
+                   object=booking, branch=booking.branch)
         messages.success(request, f"Guest checked in to Room {booking.room.room_number}")
-    
+
     # SMART REDIRECT
     if request.user.role == 'receptionist':
         return redirect('receptionist_dashboard')
@@ -700,15 +741,18 @@ def staff_check_out(request, booking_id):
         return redirect('home')
 
     booking = get_object_or_404(Booking, id=booking_id)
-    
+
     if not booking.actual_check_out:
         booking.actual_check_out = timezone.now()
         booking.save()
         room = booking.room
         room.room_status = 'dirty'
         room.save()
+        log_action(request, action='status', module='Booking',
+                   summary=f"Checked out Room {room.room_number}",
+                   object=booking, branch=booking.branch)
         messages.success(request, f"Check-out complete! Room {room.room_number} is marked DIRTY.")
-    
+
     if request.user.role == 'receptionist':
         return redirect('receptionist_dashboard')
     return redirect('view_bookings')
@@ -884,14 +928,17 @@ def kitchen_history(request):
 def update_order_status(request, order_id, status):
     order = get_object_or_404(FoodOrder, id=order_id)
     order.status = status
-    
+
     # LOGIC UPDATE: If marking delivered, save the staff member
     if status == 'delivered':
         if request.user.role == 'employee' and hasattr(request.user, 'employee_profile'):
             order.chef = request.user.employee_profile
-    
+
     order.save()
-    
+    log_action(request, action='status', module='FoodOrder',
+               summary=f"Food order #{order.id} -> {order.get_status_display()}",
+               object=order, branch=order.booking.branch if order.booking else None)
+
     # Smart Redirect
     referer = request.META.get('HTTP_REFERER')
     if referer and 'admin' in referer:
@@ -1335,6 +1382,9 @@ def confirm_payment(request, receipt_id):
         booking.total_amount = receipt.amount or _calculate_booking_amount(booking)
     booking.save()
 
+    log_action(request, action='payment', module='PaymentReceipt',
+               summary=f"Confirmed payment for Booking #{booking.id}",
+               object=receipt, branch=booking.branch)
     messages.success(request, f"Payment confirmed for Booking #{booking.id}. The reservation is secured.")
     return redirect('pending_payments')
 
@@ -1349,6 +1399,9 @@ def reject_payment(request, receipt_id):
     receipt.status = PaymentReceipt.STATUS_REJECTED
     receipt.save()
 
+    log_action(request, action='payment', module='PaymentReceipt',
+               summary=f"Rejected payment for Booking #{receipt.booking.id}",
+               object=receipt, branch=receipt.booking.branch if receipt.booking else None)
     messages.error(request, f"Receipt for Booking #{receipt.booking.id} marked as rejected.")
     return redirect('pending_payments')
 
@@ -1404,8 +1457,30 @@ def _panel_base(request):
             'manager': 'manager_panel/managerbase.html',
             'receptionist': 'receptionist_panel/receptionistbase.html',
             'housekeeping': 'housekeeping_panel/housekeepingbase.html',
+            'spa': 'housekeeping_panel/housekeepingbase.html',
         }.get(job, 'admin_panel/adminbase.html')
     return 'admin_panel/adminbase.html'
+
+
+def _can_view_audit(user):
+    if not user.is_authenticated:
+        return False
+    if user.role == 'admin':
+        return True
+    if user.role == 'employee' and hasattr(user, 'employee_profile'):
+        return user.employee_profile.job_type == 'manager'
+    return False
+
+
+def _can_review_wallet_topups(user):
+    """Admin, Manager and Receptionist can confirm guest wallet top-ups."""
+    if not user.is_authenticated:
+        return False
+    if user.role == 'admin':
+        return True
+    if user.role == 'employee' and hasattr(user, 'employee_profile'):
+        return user.employee_profile.job_type in ('manager', 'receptionist')
+    return False
 
 
 # ===========================================================================
@@ -1415,8 +1490,145 @@ def _panel_base(request):
 @customer_required
 def customer_wallet(request):
     wallet = _get_wallet(request.user)
+
+    # ---- Date + transaction type filter -----------------------------------
+    txn_type = (request.GET.get('type') or 'all').strip().lower()
+    start_str = (request.GET.get('start') or '').strip()
+    end_str = (request.GET.get('end') or '').strip()
+
     transactions = wallet.transactions.all()
-    return render(request, 'customer_panel/wallet.html', {'wallet': wallet, 'transactions': transactions})
+    if txn_type in ('credit', 'debit'):
+        transactions = transactions.filter(txn_type=txn_type)
+    start_date = end_date = None
+    try:
+        if start_str:
+            start_date = date.fromisoformat(start_str)
+            transactions = transactions.filter(created_at__date__gte=start_date)
+    except ValueError:
+        start_date = None
+    try:
+        if end_str:
+            end_date = date.fromisoformat(end_str)
+            transactions = transactions.filter(created_at__date__lte=end_date)
+    except ValueError:
+        end_date = None
+
+    # Top-up receipt history for the guest (most recent first)
+    topups = WalletTopUpReceipt.objects.filter(user=request.user).order_by('-created_at')[:20]
+    pending_topups = WalletTopUpReceipt.objects.filter(user=request.user,
+                                                       status=WalletTopUpReceipt.STATUS_PENDING).count()
+
+    return render(request, 'customer_panel/wallet.html', {
+        'wallet': wallet,
+        'transactions': transactions,
+        'topups': topups,
+        'pending_topups': pending_topups,
+        'sel_type': txn_type if txn_type in ('credit', 'debit') else 'all',
+        'sel_start': start_str,
+        'sel_end': end_str,
+    })
+
+
+@login_required
+@customer_required
+def wallet_reload(request):
+    """Guest uploads a bank-transfer receipt to top up their wallet."""
+    wallet = _get_wallet(request.user)
+    if request.method == 'POST':
+        form = WalletTopUpForm(request.POST, request.FILES)
+        if form.is_valid():
+            topup = form.save(commit=False)
+            topup.user = request.user
+            topup.save()
+            guest_name = request.user.get_full_name() or request.user.username
+            notify.notify_roles(
+                ['admin', 'manager', 'receptionist'], 'wallet_topup',
+                'Wallet top-up requested',
+                f"{guest_name} uploaded a receipt for {_money(topup.amount)} — please confirm.",
+                link='/dashboard/wallet/topups/',
+            )
+            messages.success(request,
+                             "Receipt uploaded. We'll credit your wallet once payment is confirmed.")
+            return redirect('customer_wallet')
+    else:
+        form = WalletTopUpForm()
+    return render(request, 'customer_panel/wallet_reload.html', {
+        'form': form, 'wallet': wallet,
+        'payment_settings': PaymentSetting.load(),
+    })
+
+
+@login_required
+def wallet_topup_review(request):
+    """Admin / Manager / Receptionist review pending wallet top-up receipts."""
+    if not _can_review_wallet_topups(request.user):
+        messages.error(request,
+                       "Only Admin, Manager and Receptionist can confirm wallet top-ups.")
+        return redirect('home')
+
+    status = (request.GET.get('status') or 'pending').lower()
+    qs = WalletTopUpReceipt.objects.select_related('user', 'reviewed_by').all()
+    if status in (WalletTopUpReceipt.STATUS_PENDING, WalletTopUpReceipt.STATUS_CONFIRMED,
+                  WalletTopUpReceipt.STATUS_REJECTED):
+        qs = qs.filter(status=status)
+    page_obj = paginate(request, qs)
+    pending_count = WalletTopUpReceipt.objects.filter(
+        status=WalletTopUpReceipt.STATUS_PENDING).count()
+    return render(request, 'admin_panel/wallet_topups.html', {
+        'topups': page_obj, 'page_obj': page_obj, 'sel_status': status,
+        'pending_count': pending_count, 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def wallet_topup_decide(request, topup_id):
+    if not _can_review_wallet_topups(request.user):
+        messages.error(request, "Permission denied.")
+        return redirect('home')
+    topup = get_object_or_404(WalletTopUpReceipt, id=topup_id)
+    if topup.status != WalletTopUpReceipt.STATUS_PENDING:
+        messages.info(request, "This top-up has already been reviewed.")
+        return redirect('wallet_topup_review')
+
+    if request.method == 'POST':
+        form = WalletTopUpReviewForm(request.POST)
+        if form.is_valid():
+            decision = form.cleaned_data['decision']
+            note = form.cleaned_data.get('review_note', '')
+            topup.review_note = note
+            topup.reviewed_by = request.user
+            topup.reviewed_at = timezone.now()
+            if decision == 'confirm':
+                wallet = _get_wallet(topup.user)
+                wallet.credit(topup.amount, reason=f"Wallet top-up #{topup.id} confirmed")
+                topup.status = WalletTopUpReceipt.STATUS_CONFIRMED
+                topup.save()
+                log_action(request, action='payment', module='WalletTopUp',
+                           summary=f"Confirmed wallet top-up of {_money(topup.amount)} for {topup.user.username}",
+                           object=topup)
+                notify.notify_user(topup.user, 'wallet_topup',
+                                   'Wallet top-up confirmed',
+                                   f"{_money(topup.amount)} has been credited to your wallet.",
+                                   link='/dashboard/customer/wallet/')
+                messages.success(request,
+                                 f"Top-up confirmed and {_money(topup.amount)} credited to {topup.user.username}.")
+            else:
+                topup.status = WalletTopUpReceipt.STATUS_REJECTED
+                topup.save()
+                log_action(request, action='payment', module='WalletTopUp',
+                           summary=f"Rejected wallet top-up of {_money(topup.amount)} for {topup.user.username}",
+                           object=topup)
+                notify.notify_user(topup.user, 'wallet_topup',
+                                   'Wallet top-up rejected',
+                                   note or 'Please contact reception for assistance.',
+                                   link='/dashboard/customer/wallet/')
+                messages.success(request, "Top-up marked as rejected.")
+            return redirect('wallet_topup_review')
+    else:
+        form = WalletTopUpReviewForm()
+    return render(request, 'admin_panel/wallet_topup_review.html', {
+        'topup': topup, 'form': form, 'base_template': _panel_base(request),
+    })
 
 
 @login_required
@@ -1473,10 +1685,11 @@ def cancel_booking(request, booking_id):
 def site_settings(request):
     settings_obj = SiteSetting.load()
     if request.method == 'POST':
-        form = SiteSettingForm(request.POST, instance=settings_obj)
+        # IMPORTANT: pass request.FILES so the uploaded hotel logo is actually saved.
+        form = SiteSettingForm(request.POST, request.FILES, instance=settings_obj)
         if form.is_valid():
             form.save()
-            messages.success(request, "Site settings (currency / VAT) updated successfully!")
+            messages.success(request, "Site settings (currency / VAT / hotel logo) updated successfully!")
             return redirect('site_settings')
     else:
         form = SiteSettingForm(instance=settings_obj)
@@ -1589,6 +1802,9 @@ def update_bar_order_status(request, order_id, status):
     if status == 'served' and request.user.role == 'employee' and hasattr(request.user, 'employee_profile'):
         order.bar_staff = request.user.employee_profile
     order.save()
+    log_action(request, action='status', module='BarOrder',
+               summary=f"Bar order #{order.id} -> {order.get_status_display()}",
+               object=order, branch=order.booking.branch if order.booking else None)
     return redirect('bar_dashboard')
 
 
@@ -1607,6 +1823,9 @@ def bar_history(request):
 @employee_required(allowed_jobs=['bar', 'manager'])
 def bar_inventory(request):
     active = _scope_branch(request)
+    # Trigger expiry / low-stock alerts so the bell badge updates the moment a
+    # bar/admin opens the inventory page.
+    scan_inventory_alerts(active)
     drinks = Drink.objects.all().order_by('name')
     if active:
         drinks = _branch_menu_filter(drinks, active)
@@ -1625,6 +1844,8 @@ def add_drink(request):
             if not drink.branch_id:
                 drink.branch = active or _default_branch()
             drink.save()
+            log_action(request, action='create', module='Drink',
+                       summary=f"Added drink {drink.name}", object=drink, branch=drink.branch)
             messages.success(request, "New drink added to the bar menu!")
             return redirect('bar_inventory')
     else:
@@ -1640,6 +1861,8 @@ def edit_drink(request, drink_id):
         form = DrinkForm(request.POST, request.FILES, instance=drink)
         if form.is_valid():
             form.save()
+            log_action(request, action='update', module='Drink',
+                       summary=f"Updated drink {drink.name}", object=drink, branch=drink.branch)
             messages.success(request, f"{drink.name} updated successfully!")
             return redirect('bar_inventory')
     else:
@@ -1652,6 +1875,9 @@ def edit_drink(request, drink_id):
 def delete_drink(request, drink_id):
     drink = get_object_or_404(Drink, id=drink_id)
     name = drink.name
+    branch = drink.branch
+    log_action(request, action='delete', module='Drink',
+               summary=f"Deleted drink {name}", object=drink, branch=branch)
     drink.delete()
     messages.success(request, f"{name} removed from the bar menu.")
     return redirect('bar_inventory')
@@ -1669,6 +1895,8 @@ def restock_drink(request, drink_id):
             drink.stock_quantity += qty
             drink.save()
             StockTransaction.objects.create(drink=drink, quantity=qty, note=note)
+            log_action(request, action='update', module='Drink',
+                       summary=f"Restocked {drink.name} by {qty}", object=drink, branch=drink.branch)
             messages.success(request, f"Restocked {qty} units of {drink.name}.")
             return redirect('bar_inventory')
     else:
@@ -1936,7 +2164,7 @@ def manage_branches(request):
 @employee_required(allowed_jobs=['manager'])
 def add_branch(request):
     if request.method == 'POST':
-        form = BranchForm(request.POST)
+        form = BranchForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
             messages.success(request, "Branch created successfully!")
@@ -1951,7 +2179,7 @@ def add_branch(request):
 def edit_branch(request, branch_id):
     branch = get_object_or_404(Branch, id=branch_id)
     if request.method == 'POST':
-        form = BranchForm(request.POST, instance=branch)
+        form = BranchForm(request.POST, request.FILES, instance=branch)
         if form.is_valid():
             form.save()
             messages.success(request, f"Branch {branch.name} updated.")
@@ -2227,19 +2455,24 @@ def accounting_report(request):
     food = FoodOrder.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
     bar = BarOrder.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
     laundry = LaundryOrder.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
+    spa = SpaOrder.objects.filter(is_paid=True, created_at__date__gte=start, created_at__date__lte=end)
     expenses = Expense.objects.filter(spent_on__gte=start, spent_on__lte=end)
+    kitchen_usage = IngredientUsage.objects.filter(used_on__gte=start, used_on__lte=end)
 
     if active:
         bookings = bookings.filter(branch=active)
         food = food.filter(booking__branch=active)
         bar = bar.filter(booking__branch=active)
         laundry = laundry.filter(booking__branch=active)
+        spa = spa.filter(booking__branch=active)
         expenses = expenses.filter(branch=active)
+        kitchen_usage = kitchen_usage.filter(Q(branch=active) | Q(branch__isnull=True))
 
     bookings_total = bookings.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0')
     food_total = food.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')
     bar_total = bar.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')
     laundry_total = laundry.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')
+    spa_total = spa.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')
 
     # Bar gross profit (sale price - cost price) for served/paid items.
     bar_profit = Decimal('0')
@@ -2255,10 +2488,18 @@ def accounting_report(request):
         cost = item.service.cost_price if item.service else Decimal('0')
         laundry_profit += (item.price - (cost or Decimal('0'))) * item.quantity
 
-    expenses_total = expenses.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
+    spa_profit = Decimal('0')
+    spa_items = SpaOrderItem.objects.filter(order__in=spa).select_related('service')
+    for item in spa_items:
+        cost = item.service.cost_price if item.service else Decimal('0')
+        spa_profit += (item.price - (cost or Decimal('0'))) * item.quantity
 
-    combined_revenue = bookings_total + food_total + bar_total + laundry_total
-    net = combined_revenue - expenses_total
+    expenses_total = expenses.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
+    kitchen_cost = sum((u.total_cost for u in kitchen_usage), Decimal('0'))
+
+    combined_revenue = bookings_total + food_total + bar_total + laundry_total + spa_total
+    # Subtract direct kitchen ingredient cost so the report reflects true profit.
+    net = combined_revenue - expenses_total - kitchen_cost
 
     # Expense breakdown by category
     category_breakdown = expenses.values('category').annotate(total=Sum('amount')).order_by('-total')
@@ -2284,6 +2525,9 @@ def accounting_report(request):
         'bar_profit': _money(bar_profit),
         'laundry_total': _money(laundry_total),
         'laundry_profit': _money(laundry_profit),
+        'spa_total': _money(spa_total),
+        'spa_profit': _money(spa_profit),
+        'kitchen_cost': _money(kitchen_cost),
         'combined_revenue': _money(combined_revenue),
         'expenses_total': _money(expenses_total),
         'net': _money(net),
@@ -2351,6 +2595,8 @@ def global_search(request):
 @employee_required(allowed_jobs=['kitchen', 'manager'])
 def ingredient_inventory(request):
     active = _scope_branch(request)
+    # Generate low-stock / expiry alerts for the kitchen + admin/manager bells.
+    scan_inventory_alerts(active)
     ingredients = Ingredient.objects.all().order_by('name')
     if active:
         ingredients = _branch_menu_filter(ingredients, active)
@@ -2372,6 +2618,8 @@ def add_ingredient(request):
             if not ing.branch_id:
                 ing.branch = active or _default_branch()
             ing.save()
+            log_action(request, action='create', module='Ingredient',
+                       summary=f"Added ingredient {ing.name}", object=ing, branch=ing.branch)
             messages.success(request, f"Ingredient '{ing.name}' added to inventory.")
             return redirect('ingredient_inventory')
     else:
@@ -2389,6 +2637,8 @@ def edit_ingredient(request, ingredient_id):
         form = IngredientForm(request.POST, instance=ing)
         if form.is_valid():
             form.save()
+            log_action(request, action='update', module='Ingredient',
+                       summary=f"Updated ingredient {ing.name}", object=ing, branch=ing.branch)
             messages.success(request, f"{ing.name} updated.")
             return redirect('ingredient_inventory')
     else:
@@ -2403,6 +2653,9 @@ def edit_ingredient(request, ingredient_id):
 def delete_ingredient(request, ingredient_id):
     ing = get_object_or_404(Ingredient, id=ingredient_id)
     name = ing.name
+    branch = ing.branch
+    log_action(request, action='delete', module='Ingredient',
+               summary=f"Deleted ingredient {name}", object=ing, branch=branch)
     ing.delete()
     messages.success(request, f"{name} removed from inventory.")
     return redirect('ingredient_inventory')
@@ -2420,6 +2673,9 @@ def restock_ingredient(request, ingredient_id):
             ing.stock_quantity += qty
             ing.save()
             IngredientStockTransaction.objects.create(ingredient=ing, quantity=qty, note=note)
+            log_action(request, action='update', module='Ingredient',
+                       summary=f"Restocked {ing.name} by {qty} {ing.unit}",
+                       object=ing, branch=ing.branch)
             messages.success(request, f"Restocked {qty} {ing.unit} of {ing.name}.")
             return redirect('ingredient_inventory')
     else:
@@ -2719,6 +2975,9 @@ def update_laundry_status(request, order_id, status):
         if hasattr(request.user, 'employee_profile'):
             order.handled_by = request.user.employee_profile
         order.save()
+        log_action(request, action='status', module='LaundryOrder',
+                   summary=f"Laundry order #{order.id} -> {order.get_status_display()}",
+                   object=order, branch=order.branch)
         messages.success(request, f"Laundry order #{order.id} marked as {order.get_status_display()}.")
     return redirect('laundry_monitor')
 
@@ -2731,6 +2990,8 @@ def mark_laundry_paid(request, order_id):
     if hasattr(request.user, 'employee_profile'):
         order.handled_by = request.user.employee_profile
     order.save()
+    log_action(request, action='payment', module='LaundryOrder',
+               summary=f"Laundry order #{order.id} marked paid", object=order, branch=order.branch)
     messages.success(request, f"Laundry order #{order.id} marked as paid.")
     return redirect('laundry_monitor')
 
@@ -2938,3 +3199,474 @@ def scan_inventory_alerts(branch=None):
                                 f"Expired ingredient: {ing.name}",
                                 f"{ing.name} expired on {ing.expiry_date:%b %d, %Y}.",
                                 link='/dashboard/kitchen/inventory/', branch=ing.branch, dedupe=True)
+
+
+# ===========================================================================
+# PRODUCT HISTORY  (Drinks + Ingredients)
+# ===========================================================================
+@login_required
+@employee_required(allowed_jobs=['bar', 'manager'])
+def drink_history(request, drink_id):
+    """Full history of sales / restock / adjustments for a single drink."""
+    drink = get_object_or_404(Drink, id=drink_id)
+
+    # Restock + adjustment log
+    txns = drink.stock_transactions.all().order_by('-created_at')
+
+    # Sale entries derived from bar order items (each sale also has a
+    # StockTransaction record, but we surface the order id for clarity).
+    sale_items = BarOrderItem.objects.filter(drink=drink).select_related('order').order_by('-order__created_at')
+
+    # Build a combined timeline.
+    timeline = []
+    for t in txns:
+        timeline.append({
+            'when': t.created_at,
+            'type': 'restock' if t.quantity > 0 else 'sale',
+            'qty': t.quantity,
+            'note': t.note or '',
+        })
+    # Tally running balance backwards (best-effort, since we don't snapshot a
+    # historical stock value — current stock is the trustworthy source).
+    total_in = sum(t.quantity for t in txns if t.quantity > 0)
+    total_out = sum(-t.quantity for t in txns if t.quantity < 0)
+    return render(request, 'bar_panel/drink_history.html', {
+        'drink': drink, 'txns': txns, 'sale_items': sale_items,
+        'total_in': total_in, 'total_out': total_out,
+        'base_template': _panel_base(request),
+    })
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def ingredient_history(request, ingredient_id):
+    """Full history of restock + usage for a single ingredient."""
+    ing = get_object_or_404(Ingredient, id=ingredient_id)
+    txns = ing.stock_transactions.all().order_by('-created_at')
+    usages = ing.usages.all().order_by('-used_on', '-id')
+    total_restocked = sum((t.quantity for t in txns if t.quantity > 0), Decimal('0'))
+    total_used = sum((u.quantity for u in usages), Decimal('0'))
+    return render(request, 'kitchen_panel/ingredient_history.html', {
+        'ingredient': ing,
+        'txns': txns,
+        'usages': usages,
+        'total_restocked': total_restocked,
+        'total_used': total_used,
+        'base_template': _panel_base(request),
+    })
+
+
+# ===========================================================================
+# KITCHEN INGREDIENT USAGE TRACKER
+# ===========================================================================
+def _parse_iso_date(value):
+    try:
+        return date.fromisoformat((value or '').strip())
+    except (ValueError, TypeError):
+        return None
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def kitchen_usage_list(request):
+    """List + filter ingredient usage records."""
+    scope = _scope_branch(request)
+
+    qs = IngredientUsage.objects.select_related('ingredient', 'used_by').all()
+    if scope is not None:
+        qs = qs.filter(Q(branch=scope) | Q(branch__isnull=True))
+
+    # Filters
+    sel_start = (request.GET.get('start') or '').strip()
+    sel_end = (request.GET.get('end') or '').strip()
+    sel_year = (request.GET.get('year') or '').strip()
+    sel_month = (request.GET.get('month') or '').strip()
+    sel_ingredient = (request.GET.get('ingredient') or '').strip()
+
+    start_date = _parse_iso_date(sel_start)
+    end_date = _parse_iso_date(sel_end)
+
+    if start_date:
+        qs = qs.filter(used_on__gte=start_date)
+    if end_date:
+        qs = qs.filter(used_on__lte=end_date)
+    if sel_year.isdigit():
+        qs = qs.filter(used_on__year=int(sel_year))
+    if sel_month.isdigit() and 1 <= int(sel_month) <= 12:
+        qs = qs.filter(used_on__month=int(sel_month))
+    if sel_ingredient.isdigit():
+        qs = qs.filter(ingredient_id=int(sel_ingredient))
+
+    qs = qs.order_by('-used_on', '-id')
+    page_obj = paginate(request, qs, per_page=20)
+
+    total_quantity = qs.aggregate(s=Sum('quantity'))['s'] or Decimal('0')
+    total_cost = sum((u.total_cost for u in qs), Decimal('0'))
+
+    ingredients_qs = Ingredient.objects.all().order_by('name')
+    if scope is not None:
+        ingredients_qs = _branch_menu_filter(ingredients_qs, scope)
+
+    current_year = timezone.now().date().year
+    year_choices = list(range(current_year, current_year - 6, -1))
+    month_choices = [(i, date(2000, i, 1).strftime('%B')) for i in range(1, 13)]
+
+    return render(request, 'kitchen_panel/usage_list.html', {
+        'usages': page_obj,
+        'page_obj': page_obj,
+        'total_quantity': total_quantity,
+        'total_cost': _money(total_cost),
+        'ingredients': ingredients_qs,
+        'sel_start': sel_start,
+        'sel_end': sel_end,
+        'sel_year': sel_year,
+        'sel_month': sel_month,
+        'sel_ingredient': sel_ingredient,
+        'year_choices': year_choices,
+        'month_choices': month_choices,
+        'base_template': _panel_base(request),
+    })
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def kitchen_usage_add(request):
+    scope = _scope_branch(request)
+    if request.method == 'POST':
+        form = IngredientUsageForm(request.POST, branch=scope)
+        if form.is_valid():
+            usage = form.save(commit=False)
+            usage.unit_cost = usage.ingredient.cost_price or Decimal('0')
+            usage.used_by = request.user
+            usage.branch = usage.ingredient.branch or scope
+            # Reduce inventory stock (but never go below zero)
+            ing = usage.ingredient
+            if usage.quantity > ing.stock_quantity:
+                messages.warning(request,
+                                 f"Recorded usage exceeds current stock ({ing.stock_quantity} {ing.unit}). "
+                                 "Stock will be set to 0.")
+                ing.stock_quantity = Decimal('0')
+            else:
+                ing.stock_quantity = ing.stock_quantity - usage.quantity
+            ing.save()
+            usage.save()
+            # Log a negative stock transaction too, so it appears in History.
+            IngredientStockTransaction.objects.create(
+                ingredient=ing, quantity=-usage.quantity,
+                note=f"Used in kitchen ({usage.note or 'daily usage'})")
+            log_action(request, action='update', module='IngredientUsage',
+                       summary=f"Used {usage.quantity} {ing.unit} of {ing.name}",
+                       object=usage, branch=usage.branch)
+            messages.success(request, f"Logged {usage.quantity} {ing.unit} of {ing.name} as used.")
+            return redirect('kitchen_usage_list')
+    else:
+        form = IngredientUsageForm(initial={'used_on': timezone.now().date()}, branch=scope)
+    return render(request, 'kitchen_panel/usage_form.html', {
+        'form': form, 'title': 'Record Ingredient Usage',
+        'base_template': _panel_base(request),
+    })
+
+
+@login_required
+@employee_required(allowed_jobs=['kitchen', 'manager'])
+def kitchen_usage_delete(request, usage_id):
+    usage = get_object_or_404(IngredientUsage, id=usage_id)
+    # Refund the stock back to the ingredient.
+    ing = usage.ingredient
+    ing.stock_quantity = (ing.stock_quantity or Decimal('0')) + (usage.quantity or Decimal('0'))
+    ing.save()
+    IngredientStockTransaction.objects.create(
+        ingredient=ing, quantity=usage.quantity,
+        note=f"Reversed kitchen usage #{usage.id}")
+    log_action(request, action='delete', module='IngredientUsage',
+               summary=f"Reversed {usage.quantity} {ing.unit} usage of {ing.name}",
+               object=usage, branch=usage.branch)
+    usage.delete()
+    messages.success(request, "Usage record reversed and stock refunded.")
+    return redirect('kitchen_usage_list')
+
+
+# ===========================================================================
+# SPA MODULE
+# ===========================================================================
+def _can_monitor_spa(user):
+    if not user.is_authenticated:
+        return False
+    if user.role == 'admin':
+        return True
+    if user.role == 'employee' and hasattr(user, 'employee_profile'):
+        return user.employee_profile.job_type in ('manager', 'receptionist', 'spa')
+    return False
+
+
+@login_required
+@customer_required
+def order_spa(request):
+    active_booking = _active_booking_for(request.user)
+    if not active_booking:
+        messages.error(request, "You must be checked into a room to book spa services.")
+        return redirect('customer_dashboard')
+
+    services = _branch_menu_filter(SpaService.objects.filter(is_available=True),
+                                   active_booking.branch)
+    wallet = _get_wallet(request.user)
+
+    if request.method == 'POST':
+        order = SpaOrder.objects.create(booking=active_booking, branch=active_booking.branch)
+        subtotal = Decimal('0')
+        any_item = False
+        for s in services:
+            qty = int(request.POST.get(f'qty_{s.id}', 0) or 0)
+            if qty > 0:
+                SpaOrderItem.objects.create(order=order, service=s, quantity=qty, price=s.price)
+                subtotal += qty * s.price
+                any_item = True
+
+        if not any_item:
+            order.delete()
+            messages.error(request, "Please select at least one spa service.")
+            return redirect('order_spa')
+
+        appointment = (request.POST.get('appointment_at') or '').strip()
+        if appointment:
+            try:
+                order.appointment_at = timezone.datetime.fromisoformat(appointment)
+            except (ValueError, TypeError):
+                pass
+        order.note = (request.POST.get('note') or '').strip()[:255]
+
+        _, _, total = _apply_vat(subtotal)
+        order.total_price = total
+
+        if request.POST.get('pay_method') == 'wallet':
+            if wallet.balance >= total:
+                wallet.debit(total, reason=f"Spa Order #{order.id}")
+                order.is_paid = True
+                messages.success(request, f"Spa order placed and {_money(total)} paid from your wallet!")
+            else:
+                messages.warning(
+                    request,
+                    f"Insufficient wallet balance ({_money(wallet.balance)}). The order ({_money(total)}) was added to "
+                    f"your room bill — top up your wallet or settle it at checkout."
+                )
+        else:
+            messages.success(request, "Spa order placed! It has been added to your room bill.")
+
+        order.save()
+        notify.notify_roles(
+            ['admin', 'manager', 'receptionist', 'spa'], 'new_spa_order',
+            'New spa order',
+            f"Room {active_booking.room.room_number} placed a spa order ({_money(total)}).",
+            link='/dashboard/spa/monitor/', branch=active_booking.branch,
+        )
+        log_action(request, action='create', module='SpaOrder',
+                   summary=f"Guest placed spa order ({_money(total)})", object=order,
+                   branch=active_booking.branch)
+        return redirect('customer_spa_history')
+
+    return render(request, 'customer_panel/order_spa.html', {
+        'services': services, 'room': active_booking.room, 'wallet': wallet,
+    })
+
+
+@login_required
+@customer_required
+def customer_spa_history(request):
+    orders = SpaOrder.objects.filter(booking__user=request.user)\
+        .prefetch_related('items__service').order_by('-created_at')
+    page_obj = paginate(request, orders)
+    return render(request, 'customer_panel/spa_history.html', {
+        'orders': page_obj, 'page_obj': page_obj,
+    })
+
+
+@login_required
+@customer_required
+def pay_spa_wallet(request, order_id):
+    order = get_object_or_404(SpaOrder, id=order_id, booking__user=request.user)
+    if order.is_paid:
+        messages.info(request, "This spa order is already paid.")
+        return redirect('customer_spa_history')
+    wallet = _get_wallet(request.user)
+    if wallet.balance >= order.total_price:
+        wallet.debit(order.total_price, reason=f"Spa Order #{order.id}")
+        order.is_paid = True
+        order.save()
+        messages.success(request, f"{_money(order.total_price)} paid from your wallet.")
+    else:
+        messages.error(request, f"Insufficient wallet balance ({_money(wallet.balance)}).")
+    return redirect('customer_spa_history')
+
+
+@login_required
+def spa_monitor(request):
+    if not _can_monitor_spa(request.user):
+        messages.error(request, "Permission denied.")
+        return redirect('home')
+    scope = _scope_branch(request)
+    orders = SpaOrder.objects.select_related('booking__room', 'booking__user')\
+        .prefetch_related('items__service').order_by('-created_at')
+    if scope:
+        orders = orders.filter(booking__branch=scope)
+    page_obj = paginate(request, orders)
+    revenue = orders.filter(is_paid=True).aggregate(Sum('total_price'))['total_price__sum'] or 0
+    return render(request, 'housekeeping_panel/spa_monitor.html', {
+        'orders': page_obj, 'page_obj': page_obj,
+        'revenue': _money(revenue), 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def update_spa_status(request, order_id, status):
+    if not _can_monitor_spa(request.user):
+        return redirect('home')
+    order = get_object_or_404(SpaOrder, id=order_id)
+    if status in dict(SpaOrder.STATUS_CHOICES):
+        order.status = status
+        if hasattr(request.user, 'employee_profile'):
+            order.handled_by = request.user.employee_profile
+        order.save()
+        log_action(request, action='status', module='SpaOrder',
+                   summary=f"Spa order #{order.id} -> {order.get_status_display()}",
+                   object=order, branch=order.branch)
+        messages.success(request, f"Spa order #{order.id} marked as {order.get_status_display()}.")
+    return redirect('spa_monitor')
+
+
+@login_required
+def mark_spa_paid(request, order_id):
+    if not _can_monitor_spa(request.user):
+        return redirect('home')
+    order = get_object_or_404(SpaOrder, id=order_id)
+    order.is_paid = True
+    if hasattr(request.user, 'employee_profile'):
+        order.handled_by = request.user.employee_profile
+    order.save()
+    log_action(request, action='payment', module='SpaOrder',
+               summary=f"Spa order #{order.id} marked paid", object=order, branch=order.branch)
+    messages.success(request, f"Spa order #{order.id} marked as paid.")
+    return redirect('spa_monitor')
+
+
+# ---- Spa service menu management (Admin / Manager) ----
+@login_required
+def spa_services(request):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    active = _scope_branch(request)
+    services = SpaService.objects.all()
+    if active:
+        services = _branch_menu_filter(services, active)
+    page_obj = paginate(request, services)
+    return render(request, 'admin_panel/spa_services.html', {
+        'services': page_obj, 'page_obj': page_obj, 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def add_spa_service(request):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    active = _active_branch(request)
+    if request.method == 'POST':
+        form = SpaServiceForm(request.POST, request.FILES)
+        if form.is_valid():
+            svc = form.save(commit=False)
+            if not svc.branch_id:
+                svc.branch = active or _default_branch()
+            svc.save()
+            log_action(request, action='create', module='SpaService',
+                       summary=f"Created spa service {svc.name}", object=svc, branch=svc.branch)
+            messages.success(request, f"Spa service '{svc.name}' added.")
+            return redirect('spa_services')
+    else:
+        form = SpaServiceForm(initial={'branch': active} if active else None)
+    return render(request, 'admin_panel/spa_service_form.html', {
+        'form': form, 'title': 'Add Spa Service', 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def edit_spa_service(request, service_id):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    svc = get_object_or_404(SpaService, id=service_id)
+    if request.method == 'POST':
+        form = SpaServiceForm(request.POST, request.FILES, instance=svc)
+        if form.is_valid():
+            form.save()
+            log_action(request, action='update', module='SpaService',
+                       summary=f"Updated spa service {svc.name}", object=svc, branch=svc.branch)
+            messages.success(request, f"{svc.name} updated.")
+            return redirect('spa_services')
+    else:
+        form = SpaServiceForm(instance=svc)
+    return render(request, 'admin_panel/spa_service_form.html', {
+        'form': form, 'title': 'Edit Spa Service', 'base_template': _panel_base(request),
+    })
+
+
+@login_required
+def delete_spa_service(request, service_id):
+    if not _can_manage_wallet(request.user):
+        return redirect('home')
+    svc = get_object_or_404(SpaService, id=service_id)
+    name = svc.name
+    log_action(request, action='delete', module='SpaService',
+               summary=f"Deleted spa service {name}", object=svc, branch=svc.branch)
+    svc.delete()
+    messages.success(request, f"{name} removed.")
+    return redirect('spa_services')
+
+
+# ===========================================================================
+# AUDIT LOG (Admin + Manager only)
+# ===========================================================================
+@login_required
+def audit_log_view(request):
+    if not _can_view_audit(request.user):
+        messages.error(request, "Only Admin and Manager can view audit logs.")
+        return redirect('home')
+
+    scope = _scope_branch(request)
+    qs = AuditLog.objects.select_related('user', 'branch').all()
+    if scope is not None:
+        qs = qs.filter(Q(branch=scope) | Q(branch__isnull=True))
+
+    sel_q = (request.GET.get('q') or '').strip()
+    sel_user = (request.GET.get('user') or '').strip()
+    sel_action = (request.GET.get('action') or '').strip()
+    sel_module = (request.GET.get('module') or '').strip()
+    sel_start = (request.GET.get('start') or '').strip()
+    sel_end = (request.GET.get('end') or '').strip()
+
+    if sel_q:
+        qs = qs.filter(Q(summary__icontains=sel_q) | Q(object_repr__icontains=sel_q))
+    if sel_user.isdigit():
+        qs = qs.filter(user_id=int(sel_user))
+    if sel_action in dict(AuditLog.ACTION_CHOICES):
+        qs = qs.filter(action=sel_action)
+    if sel_module:
+        qs = qs.filter(module__iexact=sel_module)
+    start_d = _parse_iso_date(sel_start)
+    end_d = _parse_iso_date(sel_end)
+    if start_d:
+        qs = qs.filter(created_at__date__gte=start_d)
+    if end_d:
+        qs = qs.filter(created_at__date__lte=end_d)
+
+    page_obj = paginate(request, qs, per_page=25)
+
+    staff_users = CustomUser.objects.filter(role__in=['admin', 'employee'], is_active=True)\
+        .order_by('first_name', 'username')
+    modules = list(AuditLog.objects.order_by().values_list('module', flat=True).distinct()[:50])
+
+    return render(request, 'admin_panel/audit_log.html', {
+        'logs': page_obj, 'page_obj': page_obj,
+        'staff_users': staff_users,
+        'action_choices': AuditLog.ACTION_CHOICES,
+        'modules': modules,
+        'sel_q': sel_q, 'sel_user': sel_user, 'sel_action': sel_action,
+        'sel_module': sel_module, 'sel_start': sel_start, 'sel_end': sel_end,
+        'base_template': _panel_base(request),
+    })

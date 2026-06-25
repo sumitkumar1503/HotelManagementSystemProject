@@ -1,5 +1,7 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.utils import timezone
 
 class CustomUserManager(UserManager):
     def create_superuser(self, username, email=None, password=None, **extra_fields):
@@ -79,6 +81,7 @@ class Employee(models.Model):
     HOUSEKEEPING = 'housekeeping'
     BAR = 'bar'
     MANAGER = 'manager'
+    SPA = 'spa'
 
     JOB_CHOICES = [
         (RECEPTIONIST, 'Receptionist'),
@@ -86,6 +89,7 @@ class Employee(models.Model):
         (HOUSEKEEPING, 'Housekeeping'),
         (BAR, 'Bar Staff'),
         (MANAGER, 'Manager'),
+        (SPA, 'Spa Therapist'),
     ]
     
     job_type = models.CharField(max_length=20, choices=JOB_CHOICES)
@@ -527,6 +531,25 @@ class SiteSetting(models.Model):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
 
+    @property
+    def about_map_src(self):
+        """
+        Return a clean Google Maps embed URL even if the admin pasted the
+        full `<iframe ...>` HTML. This avoids the "refused to connect" error
+        that happens when the entire iframe markup ends up inside src=.
+        """
+        raw = (self.about_map_embed or '').strip()
+        if not raw:
+            return ''
+        low = raw.lower()
+        if '<iframe' in low:
+            import re
+            m = re.search(r'src=["\']([^"\']+)["\']', raw, flags=re.IGNORECASE)
+            if m:
+                return m.group(1)
+            return ''
+        return raw
+
 
 # ---------------------------------------------------------------------------
 # EXPENSES (Admin + Manager) — salaries, repairs, bills, etc.
@@ -711,6 +734,8 @@ class Notification(models.Model):
         ('new_kitchen_order', 'New Kitchen Order'),
         ('new_bar_order', 'New Bar Order'),
         ('new_laundry_order', 'New Laundry Order'),
+        ('new_spa_order', 'New Spa Order'),
+        ('wallet_topup', 'Wallet Top-up Receipt'),
     ]
     recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notifications')
     notif_type = models.CharField(max_length=30, choices=TYPE_CHOICES)
@@ -737,4 +762,181 @@ class Notification(models.Model):
             'new_kitchen_order': 'utensils',
             'new_bar_order': 'wine',
             'new_laundry_order': 'shirt',
+            'new_spa_order': 'flower-2',
+            'wallet_topup': 'wallet',
         }.get(self.notif_type, 'bell')
+
+
+# ---------------------------------------------------------------------------
+# WALLET TOP-UP: guest uploads bank-transfer receipt -> staff confirms
+# ---------------------------------------------------------------------------
+class WalletTopUpReceipt(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_CONFIRMED = 'confirmed'
+    STATUS_REJECTED = 'rejected'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending Confirmation'),
+        (STATUS_CONFIRMED, 'Confirmed'),
+        (STATUS_REJECTED, 'Rejected'),
+    ]
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='wallet_topups')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    receipt_file = models.FileField(upload_to='wallet_topups/')
+    note = models.CharField(max_length=255, blank=True,
+                            help_text="Bank reference / transaction ID")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    reviewed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL,
+                                    null=True, blank=True, related_name='wallet_topups_reviewed')
+    review_note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} top-up {self.amount} ({self.get_status_display()})"
+
+
+# ---------------------------------------------------------------------------
+# KITCHEN INGREDIENT USAGE TRACKER
+# ---------------------------------------------------------------------------
+class IngredientUsage(models.Model):
+    """Log of ingredients used by the kitchen for daily cooking."""
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name='usages')
+    quantity = models.DecimalField(max_digits=10, decimal_places=2,
+                                   help_text="How much was used (in the ingredient's unit).")
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0,
+                                    help_text="Cost per unit at the time of usage (for accounting).")
+    note = models.CharField(max_length=255, blank=True,
+                            help_text="e.g. dish / meal it was used for.")
+    used_on = models.DateField(default=timezone.now,
+                               help_text="The date the ingredient was used.")
+    used_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL,
+                                null=True, blank=True, related_name='ingredient_usages')
+    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='ingredient_usages')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-used_on', '-id']
+
+    def __str__(self):
+        return f"{self.ingredient.name}: {self.quantity} ({self.used_on})"
+
+    @property
+    def total_cost(self):
+        return (self.unit_cost or Decimal('0')) * (self.quantity or Decimal('0'))
+
+
+# ---------------------------------------------------------------------------
+# SPA MODULE
+# ---------------------------------------------------------------------------
+class SpaService(models.Model):
+    CATEGORY_CHOICES = [
+        ('massage', 'Massage'),
+        ('facial', 'Facial'),
+        ('body', 'Body Treatment'),
+        ('manicure', 'Manicure / Pedicure'),
+        ('sauna', 'Sauna / Steam'),
+        ('package', 'Spa Package'),
+        ('other', 'Other'),
+    ]
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='massage')
+    duration_minutes = models.PositiveIntegerField(default=60, help_text="Estimated duration in minutes.")
+    price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    cost_price = models.DecimalField(max_digits=8, decimal_places=2, default=0,
+                                     help_text="Therapist cost / supplies (for profit calc).")
+    description = models.CharField(max_length=255, blank=True)
+    image = models.ImageField(upload_to='spa_images/', blank=True, null=True)
+    is_available = models.BooleanField(default=True)
+    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='spa_services')
+
+    class Meta:
+        ordering = ['category', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
+    @property
+    def profit_per_unit(self):
+        return (self.price or Decimal('0')) - (self.cost_price or Decimal('0'))
+
+
+class SpaOrder(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('scheduled', 'Scheduled'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    ]
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='spa_orders')
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    is_paid = models.BooleanField(default=False)
+    note = models.CharField(max_length=255, blank=True)
+    appointment_at = models.DateTimeField(blank=True, null=True)
+    handled_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='spa_orders')
+    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='spa_orders')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Spa Order #{self.id} - Room {self.booking.room.room_number}"
+
+
+class SpaOrderItem(models.Model):
+    order = models.ForeignKey(SpaOrder, on_delete=models.CASCADE, related_name='items')
+    service = models.ForeignKey(SpaService, on_delete=models.SET_NULL, null=True)
+    quantity = models.PositiveIntegerField(default=1)
+    price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.service.name if self.service else 'Service'}"
+
+    @property
+    def subtotal(self):
+        return (self.price or Decimal('0')) * self.quantity
+
+
+# ---------------------------------------------------------------------------
+# AUDIT LOG (admin & manager visibility into staff actions)
+# ---------------------------------------------------------------------------
+class AuditLog(models.Model):
+    """Generic activity log for staff actions across the system."""
+    ACTION_CHOICES = [
+        ('create', 'Create'),
+        ('update', 'Update'),
+        ('delete', 'Delete'),
+        ('status', 'Status Change'),
+        ('payment', 'Payment'),
+        ('login', 'Login'),
+        ('logout', 'Logout'),
+        ('other', 'Other'),
+    ]
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name='audit_logs')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, default='other')
+    module = models.CharField(max_length=50,
+                              help_text="e.g. Booking, Drink, Ingredient, LaundryOrder.")
+    summary = models.CharField(max_length=255)
+    object_repr = models.CharField(max_length=120, blank=True)
+    object_id = models.CharField(max_length=40, blank=True)
+    branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='audit_logs')
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.action}] {self.summary}"

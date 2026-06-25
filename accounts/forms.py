@@ -4,6 +4,7 @@ from django.db import transaction
 from .models import (
     Booking, CustomUser, Customer, Employee, FoodItem, PaymentSetting, PaymentReceipt,
     Branch, Drink, Message, SiteSetting, Expense, Ingredient, LaundryService, RoomImage,
+    WalletTopUpReceipt, IngredientUsage, SpaService,
 )
 
 
@@ -517,8 +518,8 @@ class SiteContentForm(forms.ModelForm):
             'about_heading': forms.TextInput(attrs={'class': 'form-input'}),
             'about_body': forms.Textarea(attrs={'class': 'form-input', 'rows': 5}),
             'about_image': forms.FileInput(attrs={'class': 'form-input'}),
-            'about_map_embed': forms.Textarea(attrs={'class': 'form-input', 'rows': 2,
-                              'placeholder': 'Paste the Google Maps embed src URL'}),
+            'about_map_embed': forms.Textarea(attrs={'class': 'form-input', 'rows': 3,
+                              'placeholder': 'Paste the Google Maps embed <iframe ...> tag OR just the src URL. We extract the URL automatically.'}),
             'contact_address': forms.Textarea(attrs={'class': 'form-input', 'rows': 2}),
             'contact_phone': forms.TextInput(attrs={'class': 'form-input'}),
             'contact_email': forms.EmailInput(attrs={'class': 'form-input'}),
@@ -530,3 +531,89 @@ class CSVImportForm(forms.Form):
         widget=forms.FileInput(attrs={'class': 'form-input', 'accept': '.csv'}),
         help_text="Upload a CSV using the downloadable template.",
     )
+
+
+class WalletTopUpForm(forms.ModelForm):
+    """Guest uploads a bank-transfer receipt to top up their wallet."""
+    class Meta:
+        model = WalletTopUpReceipt
+        fields = ['amount', 'receipt_file', 'note']
+        labels = {
+            'amount': 'Amount Transferred',
+            'receipt_file': 'Payment Receipt',
+            'note': 'Reference / Transaction ID (optional)',
+        }
+        widgets = {
+            'amount': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01',
+                                               'placeholder': '0.00', 'min': '0.01'}),
+            'receipt_file': forms.FileInput(attrs={'class': 'form-input',
+                                                   'accept': 'image/*,.pdf'}),
+            'note': forms.TextInput(attrs={'class': 'form-input',
+                                           'placeholder': 'e.g. NEFT ref / UTR / bank ref'}),
+        }
+
+
+class WalletTopUpReviewForm(forms.Form):
+    """Admin / Manager / Receptionist confirms or rejects a wallet top-up."""
+    DECISION_CHOICES = [
+        ('confirm', 'Confirm & credit wallet'),
+        ('reject', 'Reject'),
+    ]
+    decision = forms.ChoiceField(choices=DECISION_CHOICES,
+                                 widget=forms.RadioSelect)
+    review_note = forms.CharField(required=False,
+                                  widget=forms.TextInput(attrs={
+                                      'class': 'form-input',
+                                      'placeholder': 'Optional comment for the guest'}))
+
+
+class IngredientUsageForm(forms.ModelForm):
+    """Chef logs ingredient usage for a given date."""
+    class Meta:
+        model = IngredientUsage
+        fields = ['ingredient', 'quantity', 'used_on', 'note']
+        widgets = {
+            'ingredient': forms.Select(attrs={'class': 'form-select'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01',
+                                                 'min': '0.01'}),
+            'used_on': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'note': forms.TextInput(attrs={'class': 'form-input',
+                                           'placeholder': 'Dish / batch / note (optional)'}),
+        }
+
+    def __init__(self, *args, branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        qs = Ingredient.objects.all().order_by('name')
+        if branch is not None:
+            from django.db.models import Q
+            qs = qs.filter(Q(branch=branch) | Q(branch__isnull=True))
+        self.fields['ingredient'].queryset = qs
+
+
+class SpaServiceForm(forms.ModelForm):
+    class Meta:
+        model = SpaService
+        fields = ['name', 'category', 'duration_minutes', 'price', 'cost_price',
+                  'description', 'image', 'is_available', 'branch']
+        labels = {
+            'price': 'Price (shown to guest)',
+            'cost_price': 'Cost Price (for profit calc)',
+            'duration_minutes': 'Duration (minutes)',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input',
+                                            'placeholder': 'e.g. Swedish Massage'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'duration_minutes': forms.NumberInput(attrs={'class': 'form-input', 'min': '5'}),
+            'price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'cost_price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'description': forms.TextInput(attrs={'class': 'form-input',
+                                                   'placeholder': 'Short description (optional)'}),
+            'image': forms.FileInput(attrs={'class': 'form-input'}),
+            'is_available': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'branch': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['branch'].required = False

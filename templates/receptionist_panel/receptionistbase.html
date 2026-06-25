@@ -22,35 +22,53 @@
 <body class="flex min-h-screen">
   <!-- Sidebar -->
   <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-2xl flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300">
-    <div class="flex items-center justify-center p-6 border-b border-white/20">
-      <i data-lucide="concierge-bell" class="w-8 h-8 mr-3 text-purple-300"></i>
-      <h1 class="text-xl font-bold tracking-wide">Front Desk</h1>
+    <div class="flex items-center justify-center p-6 border-b border-white/20 gap-3">
+      {% if site_hotel_logo %}
+        <img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="w-10 h-10 rounded object-cover bg-white/20">
+      {% else %}
+        <i data-lucide="concierge-bell" class="w-8 h-8 text-purple-300"></i>
+      {% endif %}
+      <h1 class="text-xl font-bold tracking-wide leading-tight">{{ site_hotel_name|default:"Front Desk" }}</h1>
     </div>
 
-    <nav class="p-4 space-y-2 flex-1 min-h-0 overflow-y-auto">
+    <nav class="p-4 space-y-1 flex-1 min-h-0 overflow-y-auto">
       <a href="{% url 'receptionist_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'receptionist_dashboard' %}active{% endif %}">
         <i data-lucide="layout-grid" class="w-5 h-5 mr-3"></i> Dashboard
       </a>
-      
-      <!-- NEW: Booking History Link -->
-      <a href="{% url 'view_bookings' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'view_bookings' %}active{% endif %}">
-        <i data-lucide="history" class="w-5 h-5 mr-3"></i> Booking History
-      </a>
 
-      <a href="{% url 'receptionist_walkin' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'receptionist_walkin' %}active{% endif %}">
-        <i data-lucide="calendar-plus" class="w-5 h-5 mr-3"></i> Walk-in Booking
-      </a>
-      <a href="{% url 'receptionist_room_status' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'receptionist_room_status' %}active{% endif %}">
-        <i data-lucide="bed-double" class="w-5 h-5 mr-3"></i> Room Status
-      </a>
+      <!-- BOOKINGS -->
+      <div>
+        <button data-toggle="r-bookings" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center"><i data-lucide="calendar-check" class="w-5 h-5 mr-3"></i> Bookings</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="r-bookings" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'view_bookings' %}" class="block p-2 text-sm hover:text-purple-200">Booking History</a>
+          <a href="{% url 'receptionist_walkin' %}" class="block p-2 text-sm hover:text-purple-200">Walk-in Booking</a>
+          <a href="{% url 'receptionist_room_status' %}" class="block p-2 text-sm hover:text-purple-200">Room Status</a>
+        </div>
+      </div>
+
+      <!-- ORDERS / SERVICES -->
+      <div>
+        <button data-toggle="r-orders" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center"><i data-lucide="clipboard-list" class="w-5 h-5 mr-3"></i> Services</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="r-orders" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'laundry_monitor' %}" class="block p-2 text-sm hover:text-purple-200">Laundry Orders</a>
+          <a href="{% url 'spa_monitor' %}" class="block p-2 text-sm hover:text-purple-200">Spa Orders</a>
+        </div>
+      </div>
+
       <a href="{% url 'pending_payments' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'pending_payments' %}active{% endif %}">
         <i data-lucide="banknote" class="w-5 h-5 mr-3"></i> Confirm Payments
       </a>
+      <a href="{% url 'wallet_topup_review' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'wallet_topup' in request.resolver_match.url_name %}active{% endif %}">
+        <i data-lucide="wallet" class="w-5 h-5 mr-3"></i> Wallet Top-ups
+      </a>
       <a href="{% url 'receptionist_guest_list' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'receptionist_guest_list' %}active{% endif %}">
         <i data-lucide="users" class="w-5 h-5 mr-3"></i> Guest List
-      </a>
-      <a href="{% url 'laundry_monitor' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'laundry_monitor' %}active{% endif %}">
-        <i data-lucide="washing-machine" class="w-5 h-5 mr-3"></i> Laundry Orders
       </a>
       <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
         <i data-lucide="mail" class="w-5 h-5 mr-3"></i> Messages
@@ -125,6 +143,16 @@
       if(btn) btn.addEventListener('click', open);
       if(backdrop) backdrop.addEventListener('click', close);
       sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { if(window.innerWidth < 768) close(); }));
+
+      document.querySelectorAll('[data-toggle]').forEach(b => {
+        const t = document.getElementById(b.getAttribute('data-toggle'));
+        const chev = b.querySelector('[data-lucide="chevron-down"]');
+        if (!t) return;
+        if (Array.from(t.querySelectorAll('a')).some(a => a.getAttribute('href') === window.location.pathname)) {
+          t.classList.remove('hidden'); if (chev) chev.classList.add('rotate-180');
+        }
+        b.addEventListener('click', (e) => { e.preventDefault(); t.classList.toggle('hidden'); if (chev) chev.classList.toggle('rotate-180'); });
+      });
     })();
   </script>
 </body>

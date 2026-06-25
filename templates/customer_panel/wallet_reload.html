@@ -1,0 +1,57 @@
+{% extends 'customer_panel/customerbase.html' %}
+{% block title %}Reload Wallet{% endblock %}
+{% block customer_content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6 flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Reload Hotel Wallet</h1>
+            <p class="text-gray-500">Transfer to the hotel account, then upload your receipt below. We'll credit your wallet once the transfer is verified.</p>
+        </div>
+        <a href="{% url 'customer_wallet' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center gap-2">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Bank details card -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-3">Bank Transfer Details</h2>
+            <dl class="text-sm space-y-2 text-gray-700">
+                <div class="flex justify-between"><dt class="text-gray-500">Bank</dt><dd class="font-semibold">{{ payment_settings.bank_name }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">Account Name</dt><dd class="font-semibold">{{ payment_settings.account_holder_name }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">Account No.</dt><dd class="font-mono font-semibold">{{ payment_settings.account_number }}</dd></div>
+                {% if payment_settings.ifsc_code %}<div class="flex justify-between"><dt class="text-gray-500">IFSC / Code</dt><dd class="font-mono font-semibold">{{ payment_settings.ifsc_code }}</dd></div>{% endif %}
+                {% if payment_settings.branch %}<div class="flex justify-between"><dt class="text-gray-500">Branch</dt><dd class="font-semibold">{{ payment_settings.branch }}</dd></div>{% endif %}
+                {% if payment_settings.payment_link %}<div class="flex justify-between"><dt class="text-gray-500">Online</dt><dd><a class="text-indigo-600 hover:underline" href="{{ payment_settings.payment_link }}" target="_blank">Pay online</a></dd></div>{% endif %}
+            </dl>
+            <p class="text-xs text-gray-500 mt-4">{{ payment_settings.instructions }}</p>
+        </div>
+
+        <!-- Upload form -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-3">Upload Receipt</h2>
+            <form method="post" enctype="multipart/form-data" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.amount.label }}</label>
+                    {{ form.amount }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.receipt_file.label }}</label>
+                    {{ form.receipt_file }}
+                    <p class="text-xs text-gray-400 mt-1">Image or PDF of the bank confirmation.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.note.label }}</label>
+                    {{ form.note }}
+                </div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow transition">Submit Receipt</button>
+            </form>
+        </div>
+    </div>
+</div>
+<style>
+    .form-input { width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 8px; outline: none; }
+    .form-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+</style>
+{% endblock %}

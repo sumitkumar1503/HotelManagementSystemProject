@@ -1,0 +1,98 @@
+{% extends 'customer_panel/customerbase.html' %}
+{% block title %}Spa &amp; Wellness{% endblock %}
+{% block customer_content %}
+<div class="max-w-6xl mx-auto pb-24">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Spa &amp; Wellness</h1>
+            <p class="text-gray-500">Book a treatment for Room <span class="font-bold text-indigo-600">{{ room.room_number }}</span>.</p>
+        </div>
+    </div>
+
+    <form method="post" id="spaForm">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {% for s in services %}
+            <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+                {% if s.image %}<img src="{{ s.image.url }}" alt="{{ s.name }}" class="h-40 w-full object-cover">{% endif %}
+                <div class="p-5">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center"><i data-lucide="flower-2" class="w-5 h-5"></i></div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">{{ s.name }}</h3>
+                            <p class="text-xs text-gray-500 uppercase tracking-wider">{{ s.get_category_display }} · {{ s.duration_minutes }} min</p>
+                        </div>
+                    </div>
+                    {% if s.description %}<p class="text-sm text-gray-500 mb-2">{{ s.description }}</p>{% endif %}
+                    <div class="flex items-center justify-between mt-4">
+                        <span class="font-bold text-pink-600">{{ site_currency }}{{ s.price|floatformat:2 }}</span>
+                        <input type="number" name="qty_{{ s.id }}" min="0" value="0"
+                               data-price="{{ s.price }}"
+                               class="spa-qty w-20 p-2 border border-gray-200 rounded-lg text-center focus:ring-2 focus:ring-pink-400 outline-none">
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-3 text-center py-12">
+                <p class="text-gray-500 text-lg">No spa services available right now.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if services %}
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-24 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Preferred date &amp; time</label>
+                <input type="datetime-local" name="appointment_at"
+                       class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-400 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Notes (allergies, preferences)</label>
+                <input type="text" name="note" maxlength="255"
+                       class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-400 outline-none">
+            </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:pl-64 z-40">
+            <div class="max-w-6xl mx-auto flex flex-wrap justify-between items-center gap-3">
+                <div class="flex flex-col">
+                    <span class="text-gray-500 text-sm">Subtotal <span id="subTotal">{{ site_currency }}0.00</span>{% if site_vat %} · VAT {{ site_vat|floatformat:2 }}% <span id="vatAmt">{{ site_currency }}0.00</span>{% endif %}</span>
+                    <span class="text-2xl font-bold text-pink-600" id="totalPrice">{{ site_currency }}0.00</span>
+                </div>
+                <div class="flex items-center gap-4 flex-wrap">
+                    <label class="flex items-center gap-2 text-sm text-gray-600 bg-emerald-50 px-3 py-2 rounded-lg">
+                        <input type="checkbox" name="pay_method" value="wallet" class="w-4 h-4 text-emerald-600">
+                        Pay now with wallet ({{ site_currency }}{{ wallet.balance|floatformat:2 }})
+                    </label>
+                    <button type="submit" class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition">Book Spa</button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<script>
+    const symbol = "{{ site_currency }}";
+    const vatRate = parseFloat("{{ site_vat|default:0 }}") || 0;
+    document.addEventListener('DOMContentLoaded', function() {
+        const qtys = document.querySelectorAll('.spa-qty');
+        const totalDisplay = document.getElementById('totalPrice');
+        const subDisplay = document.getElementById('subTotal');
+        const vatDisplay = document.getElementById('vatAmt');
+        function calc() {
+            let subtotal = 0;
+            qtys.forEach(q => {
+                const price = parseFloat(q.getAttribute('data-price'));
+                const val = parseInt(q.value) || 0;
+                subtotal += price * val;
+            });
+            const vat = subtotal * vatRate / 100;
+            if(subDisplay) subDisplay.textContent = symbol + subtotal.toFixed(2);
+            if(vatDisplay) vatDisplay.textContent = symbol + vat.toFixed(2);
+            if(totalDisplay) totalDisplay.textContent = symbol + (subtotal + vat).toFixed(2);
+        }
+        qtys.forEach(q => q.addEventListener('input', calc));
+    });
+</script>
+{% endblock %}

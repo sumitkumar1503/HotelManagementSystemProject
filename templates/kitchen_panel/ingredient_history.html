@@ -1,0 +1,94 @@
+{% extends base_template|default:'kitchen_panel/kitchenbase.html' %}
+{% block title %}History — {{ ingredient.name }}{% endblock %}
+{% block panel_content %}
+<div class="max-w-5xl mx-auto">
+    <div class="mb-6 flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">{{ ingredient.name }} — History</h1>
+            <p class="text-gray-500">Restock + usage breakdown that explains the quantity left.</p>
+        </div>
+        <a href="{% url 'ingredient_inventory' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+        </a>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="text-xs uppercase text-gray-500 font-semibold">Current Stock</div>
+            <div class="text-2xl font-bold text-gray-800">{{ ingredient.stock_quantity|floatformat:2 }} {{ ingredient.unit }}</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="text-xs uppercase text-gray-500 font-semibold">Total Restocked</div>
+            <div class="text-2xl font-bold text-green-600">+{{ total_restocked|floatformat:2 }}</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="text-xs uppercase text-gray-500 font-semibold">Total Used</div>
+            <div class="text-2xl font-bold text-red-600">-{{ total_used|floatformat:2 }}</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="text-xs uppercase text-gray-500 font-semibold">Cost / Unit</div>
+            <div class="text-2xl font-bold text-gray-800">{{ site_currency }}{{ ingredient.cost_price|floatformat:2 }}</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+                <i data-lucide="repeat" class="w-4 h-4 text-orange-600"></i>
+                <h2 class="font-bold text-gray-800">Stock Transactions</h2>
+            </div>
+            <table class="rtable w-full text-left min-w-[420px]">
+                <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b">
+                    <tr>
+                        <th class="px-6 py-3">Date</th>
+                        <th class="px-6 py-3">Change</th>
+                        <th class="px-6 py-3">Note</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for t in txns %}
+                    <tr>
+                        <td data-label="Date" class="px-6 py-3 text-sm text-gray-500">{{ t.created_at|date:"M d, Y H:i" }}</td>
+                        <td data-label="Change" class="px-6 py-3 font-bold {% if t.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                            {% if t.quantity > 0 %}+{% endif %}{{ t.quantity }}
+                        </td>
+                        <td data-label="Note" class="px-6 py-3 text-sm text-gray-600">{{ t.note|default:"—" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="p-8 text-center text-gray-400">No transactions recorded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+                <i data-lucide="utensils" class="w-4 h-4 text-orange-600"></i>
+                <h2 class="font-bold text-gray-800">Usage Records</h2>
+            </div>
+            <table class="rtable w-full text-left min-w-[420px]">
+                <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b">
+                    <tr>
+                        <th class="px-6 py-3">Date</th>
+                        <th class="px-6 py-3">Qty</th>
+                        <th class="px-6 py-3">By</th>
+                        <th class="px-6 py-3 text-right">Cost</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for u in usages %}
+                    <tr>
+                        <td data-label="Date" class="px-6 py-3 text-sm text-gray-500">{{ u.used_on|date:"M d, Y" }}</td>
+                        <td data-label="Qty" class="px-6 py-3 font-semibold">{{ u.quantity|floatformat:2 }} {{ ingredient.unit }}</td>
+                        <td data-label="By" class="px-6 py-3 text-sm">{{ u.used_by.get_full_name|default:u.used_by.username|default:"—" }}</td>
+                        <td data-label="Cost" class="px-6 py-3 text-right font-semibold">{{ site_currency }}{{ u.total_cost|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="p-8 text-center text-gray-400">No usage records yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

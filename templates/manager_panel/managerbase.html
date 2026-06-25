@@ -19,44 +19,76 @@
 </head>
 <body class="flex min-h-screen">
   <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col">
-    <div class="flex items-center justify-center p-6 border-b border-white/20">
-      <i data-lucide="briefcase" class="w-8 h-8 mr-3 text-emerald-300"></i>
-      <h1 class="text-xl font-bold">Manager</h1>
+    <div class="flex items-center justify-center p-6 border-b border-white/20 gap-3">
+      {% if site_hotel_logo %}
+        <img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="w-10 h-10 rounded object-cover bg-white/20">
+      {% else %}
+        <i data-lucide="briefcase" class="w-8 h-8 text-emerald-300"></i>
+      {% endif %}
+      <h1 class="text-xl font-bold leading-tight">{{ site_hotel_name|default:"Manager" }}</h1>
     </div>
 
-    <nav class="p-4 space-y-2 flex-1 min-h-0 overflow-y-auto">
+    <nav class="p-4 space-y-1 flex-1 min-h-0 overflow-y-auto">
       <a href="{% url 'manager_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}">
         <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i> Dashboard
       </a>
       <a href="{% url 'manage_branches' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'branch' in request.resolver_match.url_name %}active{% endif %}">
         <i data-lucide="git-branch" class="w-5 h-5 mr-3"></i> Branches
       </a>
-      <a href="{% url 'view_bookings' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'view_bookings' %}active{% endif %}">
-        <i data-lucide="calendar-check" class="w-5 h-5 mr-3"></i> Bookings
-      </a>
+
+      <!-- ORDERS -->
+      <div>
+        <button data-toggle="m-orders" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center"><i data-lucide="clipboard-list" class="w-5 h-5 mr-3"></i> Orders</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="m-orders" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'view_bookings' %}" class="block p-2 text-sm hover:text-emerald-200">Bookings</a>
+          <a href="{% url 'sales_record' %}" class="block p-2 text-sm hover:text-emerald-200">Sales Record</a>
+          <a href="{% url 'laundry_monitor' %}" class="block p-2 text-sm hover:text-emerald-200">Laundry Orders</a>
+          <a href="{% url 'spa_monitor' %}" class="block p-2 text-sm hover:text-emerald-200">Spa Orders</a>
+        </div>
+      </div>
+
+      <!-- INVENTORY -->
+      <div>
+        <button data-toggle="m-inv" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center"><i data-lucide="package" class="w-5 h-5 mr-3"></i> Inventory</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="m-inv" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'bar_inventory' %}" class="block p-2 text-sm hover:text-emerald-200">Bar Inventory</a>
+          <a href="{% url 'ingredient_inventory' %}" class="block p-2 text-sm hover:text-emerald-200">Kitchen Inventory</a>
+          <a href="{% url 'kitchen_usage_list' %}" class="block p-2 text-sm hover:text-emerald-200">Ingredient Usage</a>
+        </div>
+      </div>
+
+      <!-- MENU & SERVICES -->
+      <div>
+        <button data-toggle="m-menu" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center"><i data-lucide="utensils" class="w-5 h-5 mr-3"></i> Menu &amp; Service</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="m-menu" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'laundry_services' %}" class="block p-2 text-sm hover:text-emerald-200">Laundry Services</a>
+          <a href="{% url 'spa_services' %}" class="block p-2 text-sm hover:text-emerald-200">Spa Services</a>
+        </div>
+      </div>
+
       <a href="{% url 'view_guests' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'view_guests' or request.resolver_match.url_name == 'add_wallet_credit' %}active{% endif %}">
         <i data-lucide="user-check" class="w-5 h-5 mr-3"></i> Guests
       </a>
-      <a href="{% url 'sales_record' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'sales_record' %}active{% endif %}">
-        <i data-lucide="receipt-text" class="w-5 h-5 mr-3"></i> Sales Record
-      </a>
-      <a href="{% url 'bar_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'bar_inventory' %}active{% endif %}">
-        <i data-lucide="package" class="w-5 h-5 mr-3"></i> Bar Inventory
-      </a>
-      <a href="{% url 'ingredient_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'ingredient' in request.resolver_match.url_name %}active{% endif %}">
-        <i data-lucide="carrot" class="w-5 h-5 mr-3"></i> Kitchen Inventory
-      </a>
-      <a href="{% url 'laundry_monitor' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'laundry_monitor' %}active{% endif %}">
-        <i data-lucide="washing-machine" class="w-5 h-5 mr-3"></i> Laundry Orders
-      </a>
-      <a href="{% url 'laundry_services' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'laundry_service' in request.resolver_match.url_name %}active{% endif %}">
-        <i data-lucide="shirt" class="w-5 h-5 mr-3"></i> Laundry Services
+      <a href="{% url 'audit_log' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'audit_log' %}active{% endif %}">
+        <i data-lucide="shield-check" class="w-5 h-5 mr-3"></i> Audit Log
       </a>
       <a href="{% url 'expense_list' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'expense' in request.resolver_match.url_name %}active{% endif %}">
         <i data-lucide="trending-down" class="w-5 h-5 mr-3"></i> Expenses
       </a>
       <a href="{% url 'accounting_report' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'accounting_report' %}active{% endif %}">
         <i data-lucide="bar-chart-3" class="w-5 h-5 mr-3"></i> Accounting &amp; Report
+      </a>
+      <a href="{% url 'wallet_topup_review' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'wallet_topup' in request.resolver_match.url_name %}active{% endif %}">
+        <i data-lucide="wallet" class="w-5 h-5 mr-3"></i> Wallet Top-ups
       </a>
       <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
         <i data-lucide="mail" class="w-5 h-5 mr-3"></i> Messages
@@ -127,6 +159,20 @@
       if(btn) btn.addEventListener('click', open);
       if(backdrop) backdrop.addEventListener('click', close);
       sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { if(window.innerWidth < 768) close(); }));
+
+      document.querySelectorAll('[data-toggle]').forEach(btn => {
+        const targetId = btn.getAttribute('data-toggle');
+        const target = document.getElementById(targetId);
+        const chev = btn.querySelector('[data-lucide="chevron-down"]');
+        if (!target) return;
+        const isActiveChild = Array.from(target.querySelectorAll('a')).some(a => a.getAttribute('href') === window.location.pathname);
+        if (isActiveChild) { target.classList.remove('hidden'); if (chev) chev.classList.add('rotate-180'); }
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          target.classList.toggle('hidden');
+          if (chev) chev.classList.toggle('rotate-180');
+        });
+      });
     })();
   </script>
 </body>

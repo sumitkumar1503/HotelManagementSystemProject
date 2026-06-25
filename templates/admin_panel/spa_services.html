@@ -1,0 +1,62 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Spa Services{% endblock %}
+{% block panel_content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Spa Services</h2>
+            <p class="text-gray-500">Manage the spa menu guests can order from.</p>
+        </div>
+        <a href="{% url 'add_spa_service' %}" class="px-5 py-2.5 bg-pink-600 text-white font-bold rounded-lg hover:bg-pink-700 shadow transition flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Service
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-x-auto">
+        <table class="rtable w-full text-left min-w-[720px]">
+            <thead class="bg-pink-50 text-pink-900 text-xs uppercase font-semibold border-b border-pink-100">
+                <tr>
+                    <th class="px-6 py-4">Service</th>
+                    <th class="px-6 py-4">Category</th>
+                    <th class="px-6 py-4">Duration</th>
+                    <th class="px-6 py-4">Cost</th>
+                    <th class="px-6 py-4">Price</th>
+                    <th class="px-6 py-4">Profit</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for s in services %}
+                <tr class="hover:bg-pink-50/40 transition">
+                    <td data-label="Service" class="px-6 py-4 font-bold text-gray-800">
+                        <div class="flex items-center gap-3">
+                            {% if s.image %}<img src="{{ s.image.url }}" alt="{{ s.name }}" class="w-10 h-10 rounded object-cover">{% endif %}
+                            <span>{{ s.name }}</span>
+                        </div>
+                    </td>
+                    <td data-label="Category" class="px-6 py-4 text-sm text-gray-500">{{ s.get_category_display }}</td>
+                    <td data-label="Duration" class="px-6 py-4 text-sm text-gray-600">{{ s.duration_minutes }} min</td>
+                    <td data-label="Cost" class="px-6 py-4 text-sm text-gray-600">{{ site_currency }}{{ s.cost_price|floatformat:2 }}</td>
+                    <td data-label="Price" class="px-6 py-4 font-semibold text-gray-800">{{ site_currency }}{{ s.price|floatformat:2 }}</td>
+                    <td data-label="Profit" class="px-6 py-4 font-semibold text-emerald-600">{{ site_currency }}{{ s.profit_per_unit|floatformat:2 }}</td>
+                    <td data-label="Status" class="px-6 py-4">
+                        {% if s.is_available %}<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Available</span>
+                        {% else %}<span class="px-2 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded">Off</span>{% endif %}
+                    </td>
+                    <td class="rtable-actions px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url 'edit_spa_service' s.id %}" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</a>
+                            <a href="{% url 'delete_spa_service' s.id %}" onclick="return confirm('Delete {{ s.name }}?');" class="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100">Delete</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="p-10 text-center text-gray-500">No spa services yet. Add massages, facials, treatments, etc.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'common/_pagination.html' %}
+</div>
+{% endblock %}

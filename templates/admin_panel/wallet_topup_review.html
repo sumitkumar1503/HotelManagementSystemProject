@@ -1,0 +1,49 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Review Wallet Top-up{% endblock %}
+{% block panel_content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6 flex items-center justify-between">
+        <h1 class="text-3xl font-bold text-gray-800">Review Wallet Top-up</h1>
+        <a href="{% url 'wallet_topup_review' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4">Request Details</h2>
+            <dl class="text-sm space-y-2 text-gray-700">
+                <div class="flex justify-between"><dt class="text-gray-500">Guest</dt><dd class="font-semibold">{{ topup.user.get_full_name|default:topup.user.username }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">Amount</dt><dd class="font-bold">{{ site_currency }}{{ topup.amount|floatformat:2 }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">Reference</dt><dd>{{ topup.note|default:"—" }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">Uploaded</dt><dd>{{ topup.created_at|date:"M d, Y H:i" }}</dd></div>
+            </dl>
+            {% if topup.receipt_file %}
+            <div class="mt-4">
+                <a href="{{ topup.receipt_file.url }}" target="_blank"
+                   class="inline-flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 text-sm font-bold rounded hover:bg-indigo-100">
+                    <i data-lucide="external-link" class="w-4 h-4"></i> Open Receipt
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4">Decision</h2>
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <div class="space-y-2">
+                    {% for radio in form.decision %}
+                        <label class="flex items-center gap-2 text-sm text-gray-700">{{ radio.tag }} {{ radio.choice_label }}</label>
+                    {% endfor %}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">Note (optional)</label>
+                    {{ form.review_note }}
+                </div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow">Submit Decision</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

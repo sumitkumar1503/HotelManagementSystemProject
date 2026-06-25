@@ -139,117 +139,115 @@
         </div>
         {% endwith %}
       </div>
-<div>
-    {% with url_name=request.resolver_match.url_name %}
-    <button id="kitchen-toggle" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
-      <span class="flex items-center">
-        <i data-lucide="utensils" class="w-5 h-5 mr-4"></i>
-        <span>Kitchen</span>
-      </span>
-      <i data-lucide="chevron-down" id="kitchen-chevron" class="w-5 h-5 transition-transform"></i>
-    </button>
-    <div id="kitchen-submenu" class="pl-8 pt-2 space-y-1 hidden">
-      <a href="{% url 'view_food_menu' %}" class="submenu-link block p-2 rounded-lg text-sm">Manage Menu</a>
-      <a href="{% url 'add_food_item' %}" class="submenu-link block p-2 rounded-lg text-sm">Add Food Item</a>
-      <a href="{% url 'ingredient_inventory' %}" class="submenu-link block p-2 rounded-lg text-sm">Ingredient Inventory</a>
-      <a href="{% url 'admin_kitchen_monitor' %}" class="submenu-link block p-2 rounded-lg text-sm">Kitchen Monitor</a>
-    <a href="{% url 'admin_kitchen_history' %}" class="submenu-link block p-2 rounded-lg text-sm">Delivery History</a>
-
-    </div>
-    {% endwith %}
-</div>
-      <!-- Bookings (New for Hotel) -->
+      <!-- Staff Management additions: Audit Log -->
       <div>
-        {% with url_name=request.resolver_match.url_name %}
-        <button id="bookings-toggle" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+        <button data-toggle="staff-mgmt-sub" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
           <span class="flex items-center">
-            <i data-lucide="calendar-check" class="w-5 h-5 mr-4"></i>
-            <span>Bookings</span>
+            <i data-lucide="user-check" class="w-5 h-5 mr-4"></i>
+            <span>Guests &amp; Audit</span>
           </span>
-          <i data-lucide="chevron-down" id="bookings-chevron" class="w-5 h-5 transition-transform"></i>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
         </button>
-        <!-- Inside the Bookings submenu in adminbase.html -->
-<div id="bookings-submenu" class="pl-8 pt-2 space-y-1 hidden">
-    <a href="{% url 'view_bookings' %}" class="submenu-link block p-2 rounded-lg text-sm">Manage Bookings</a>
-</div>
-      
-        {% endwith %}
+        <div id="staff-mgmt-sub" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'view_guests' %}" class="submenu-link block p-2 rounded-lg text-sm">All Guests</a>
+          <a href="{% url 'audit_log' %}" class="submenu-link block p-2 rounded-lg text-sm">Audit Log</a>
+        </div>
       </div>
 
-      <!-- Guests -->
-      <!-- Inside adminbase.html -->
-<a href="{% url 'view_guests' %}" class="sidebar-link flex items-center p-3 rounded-lg">
-    <i data-lucide="user-check" class="w-5 h-5 mr-4"></i>
-    <span>Guests</span>
-</a>
+      <!-- ORDERS (Bookings + monitors) -->
+      <div>
+        <button data-toggle="orders-sub" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center">
+            <i data-lucide="clipboard-list" class="w-5 h-5 mr-4"></i>
+            <span>Orders</span>
+          </span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="orders-sub" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'view_bookings' %}" class="submenu-link block p-2 rounded-lg text-sm">Bookings</a>
+          <a href="{% url 'admin_kitchen_monitor' %}" class="submenu-link block p-2 rounded-lg text-sm">Kitchen Monitor</a>
+          <a href="{% url 'admin_kitchen_history' %}" class="submenu-link block p-2 rounded-lg text-sm">Kitchen Delivery History</a>
+          <a href="{% url 'laundry_monitor' %}" class="submenu-link block p-2 rounded-lg text-sm">Laundry Orders</a>
+          <a href="{% url 'spa_monitor' %}" class="submenu-link block p-2 rounded-lg text-sm">Spa Orders</a>
+          <a href="{% url 'sales_record' %}" class="submenu-link block p-2 rounded-lg text-sm">Sales Record</a>
+        </div>
+      </div>
 
-<!-- Bar Inventory -->
-<a href="{% url 'bar_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'drink' in request.resolver_match.url_name or request.resolver_match.url_name == 'bar_inventory' %}active{% endif %}">
-    <i data-lucide="wine" class="w-5 h-5 mr-4"></i>
-    <span>Bar Inventory</span>
-</a>
+      <!-- INVENTORY -->
+      <div>
+        <button data-toggle="inventory-sub" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center">
+            <i data-lucide="package" class="w-5 h-5 mr-4"></i>
+            <span>Inventory</span>
+          </span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="inventory-sub" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'bar_inventory' %}" class="submenu-link block p-2 rounded-lg text-sm">Bar Inventory</a>
+          <a href="{% url 'ingredient_inventory' %}" class="submenu-link block p-2 rounded-lg text-sm">Kitchen Ingredients</a>
+          <a href="{% url 'kitchen_usage_list' %}" class="submenu-link block p-2 rounded-lg text-sm">Ingredient Usage</a>
+        </div>
+      </div>
 
-<!-- Sales Record -->
-<a href="{% url 'sales_record' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'sales_record' %}active{% endif %}">
-    <i data-lucide="receipt-text" class="w-5 h-5 mr-4"></i>
-    <span>Sales Record</span>
-</a>
+      <!-- MENU & SERVICES -->
+      <div>
+        <button data-toggle="menu-sub" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center">
+            <i data-lucide="utensils" class="w-5 h-5 mr-4"></i>
+            <span>Menu &amp; Service</span>
+          </span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="menu-sub" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'view_food_menu' %}" class="submenu-link block p-2 rounded-lg text-sm">Food Menu</a>
+          <a href="{% url 'laundry_services' %}" class="submenu-link block p-2 rounded-lg text-sm">Laundry Services</a>
+          <a href="{% url 'spa_services' %}" class="submenu-link block p-2 rounded-lg text-sm">Spa Services</a>
+        </div>
+      </div>
 
-<!-- Laundry -->
-<a href="{% url 'laundry_monitor' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'laundry_monitor' %}active{% endif %}">
-    <i data-lucide="washing-machine" class="w-5 h-5 mr-4"></i>
-    <span>Laundry Orders</span>
-</a>
-<a href="{% url 'laundry_services' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'laundry_service' in request.resolver_match.url_name %}active{% endif %}">
-    <i data-lucide="shirt" class="w-5 h-5 mr-4"></i>
-    <span>Laundry Services</span>
-</a>
+      <!-- ACCOUNTING -->
+      <div>
+        <button data-toggle="accounting-sub" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center">
+            <i data-lucide="bar-chart-3" class="w-5 h-5 mr-4"></i>
+            <span>Accounting</span>
+          </span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="accounting-sub" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'accounting_report' %}" class="submenu-link block p-2 rounded-lg text-sm">Accounting &amp; Report</a>
+          <a href="{% url 'expense_list' %}" class="submenu-link block p-2 rounded-lg text-sm">Expenses</a>
+          <a href="{% url 'wallet_topup_review' %}" class="submenu-link block p-2 rounded-lg text-sm">Wallet Top-ups</a>
+        </div>
+      </div>
 
-<!-- Expenses -->
-<a href="{% url 'expense_list' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'expense' in request.resolver_match.url_name %}active{% endif %}">
-    <i data-lucide="trending-down" class="w-5 h-5 mr-4"></i>
-    <span>Expenses</span>
-</a>
+      <a href="{% url 'manage_branches' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'branch' in request.resolver_match.url_name %}active{% endif %}">
+        <i data-lucide="git-branch" class="w-5 h-5 mr-4"></i>
+        <span>Branches</span>
+      </a>
 
-<!-- Accounting & Report -->
-<a href="{% url 'accounting_report' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'accounting_report' %}active{% endif %}">
-    <i data-lucide="bar-chart-3" class="w-5 h-5 mr-4"></i>
-    <span>Accounting &amp; Report</span>
-</a>
+      <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+        <i data-lucide="mail" class="w-5 h-5 mr-4"></i>
+        <span>Messages</span>
+        {% if unread_messages %}<span class="ml-auto bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
+      </a>
 
-<!-- Branches -->
-<a href="{% url 'manage_branches' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if 'branch' in request.resolver_match.url_name %}active{% endif %}">
-    <i data-lucide="git-branch" class="w-5 h-5 mr-4"></i>
-    <span>Branches</span>
-</a>
+      <!-- SETTINGS -->
+      <div>
+        <button data-toggle="settings-sub" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center">
+            <i data-lucide="settings" class="w-5 h-5 mr-4"></i>
+            <span>Settings</span>
+          </span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="settings-sub" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'payment_settings' %}" class="submenu-link block p-2 rounded-lg text-sm">Payment Settings</a>
+          <a href="{% url 'site_settings' %}" class="submenu-link block p-2 rounded-lg text-sm">Hotel / Currency / VAT</a>
+          <a href="{% url 'site_content' %}" class="submenu-link block p-2 rounded-lg text-sm">Website Content</a>
+        </div>
+      </div>
 
-<!-- Messages -->
-<a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
-    <i data-lucide="mail" class="w-5 h-5 mr-4"></i>
-    <span>Messages</span>
-    {% if unread_messages %}<span class="ml-auto bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
-</a>
-
-<!-- Payment / Bank Settings -->
-<a href="{% url 'payment_settings' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'payment_settings' %}active{% endif %}">
-    <i data-lucide="landmark" class="w-5 h-5 mr-4"></i>
-    <span>Payment Settings</span>
-</a>
-
-<!-- Currency & VAT -->
-<a href="{% url 'site_settings' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'site_settings' %}active{% endif %}">
-    <i data-lucide="badge-dollar-sign" class="w-5 h-5 mr-4"></i>
-    <span>Currency &amp; VAT</span>
-</a>
-
-<!-- Website Content (Home & About) -->
-<a href="{% url 'site_content' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'site_content' %}active{% endif %}">
-    <i data-lucide="layout-template" class="w-5 h-5 mr-4"></i>
-    <span>Website Content</span>
-</a>
-
-      <!-- Home Page Link -->
-     
     </nav>
 
     <!-- Logout Section -->
@@ -354,11 +352,26 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    // Initialize toggles for the menus we defined above
     setupSubmenu('staff-toggle', 'staff-submenu', 'staff-chevron');
     setupSubmenu('rooms-toggle', 'rooms-submenu', 'rooms-chevron');
-    setupSubmenu('bookings-toggle', 'bookings-submenu', 'bookings-chevron');
-    setupSubmenu('kitchen-toggle', 'kitchen-submenu', 'kitchen-chevron');
+
+    // Generic data-toggle submenus (auto-open if a descendant is the active URL).
+    document.querySelectorAll('[data-toggle]').forEach(btn => {
+      const targetId = btn.getAttribute('data-toggle');
+      const target = document.getElementById(targetId);
+      const chev = btn.querySelector('[data-lucide="chevron-down"]');
+      if (!target) return;
+      const isActiveChild = Array.from(target.querySelectorAll('a')).some(a => a.getAttribute('href') === window.location.pathname);
+      if (isActiveChild) {
+        target.classList.remove('hidden');
+        if (chev) chev.classList.add('rotate-180');
+      }
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        target.classList.toggle('hidden');
+        if (chev) chev.classList.toggle('rotate-180');
+      });
+    });
   });
 </script>
 </body>

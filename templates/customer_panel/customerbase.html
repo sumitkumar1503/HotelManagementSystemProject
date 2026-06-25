@@ -47,59 +47,53 @@
 <div class="flex min-h-screen">
   <!-- Sidebar -->
   <aside id="sidebar" class="sidebar w-64 flex-shrink-0 fixed inset-y-0 left-0 z-30 flex flex-col transform -translate-x-full md:translate-x-0 shadow-xl transition-transform duration-300">
-    <div class="flex items-center justify-center p-6 border-b border-white/30">
-      <i data-lucide="crown" class="w-8 h-8 mr-3 text-yellow-300"></i>
-      <h1 class="text-2xl font-bold tracking-wide">Guest Portal</h1>
+    <div class="flex items-center justify-center p-6 border-b border-white/30 gap-3">
+      {% if site_hotel_logo %}
+        <img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="w-10 h-10 rounded object-cover bg-white/20">
+      {% else %}
+        <i data-lucide="crown" class="w-8 h-8 text-yellow-300"></i>
+      {% endif %}
+      <h1 class="text-xl font-bold tracking-wide leading-tight">{{ site_hotel_name|default:"Guest Portal" }}</h1>
     </div>
 
-    <nav class="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-2">
-      
+    <nav class="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-1">
+
       <a href="{% url 'customer_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_dashboard' %}active{% endif %}">
         <i data-lucide="layout-dashboard" class="w-5 h-5 mr-4"></i>
         <span>Dashboard</span>
       </a>
 
-      <a href="{% url 'customer_bookings' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_bookings' %}active{% endif %}">
-        <i data-lucide="calendar-days" class="w-5 h-5 mr-4"></i>
-        <span>My Bookings</span>
-      </a>
+      <!-- BOOKINGS GROUP -->
+      <div>
+        <button data-toggle="bookings-sub" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center"><i data-lucide="calendar-check" class="w-5 h-5 mr-4"></i><span>Bookings</span></span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="bookings-sub" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'customer_bookings' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">My Bookings</a>
+          <a href="{% url 'room_list' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">Book a New Room</a>
+        </div>
+      </div>
 
-      <a href="{% url 'room_list' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all">
-        <i data-lucide="bed-double" class="w-5 h-5 mr-4"></i>
-        <span>Book New Room</span>
-      </a>
+      <!-- ORDERS GROUP -->
+      <div>
+        <button data-toggle="orders-sub" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center"><i data-lucide="shopping-bag" class="w-5 h-5 mr-4"></i><span>Orders</span></span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="orders-sub" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'order_food' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">Order Food</a>
+          <a href="{% url 'customer_food_history' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">Food Orders</a>
+          <a href="{% url 'order_drinks' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">Order Drinks</a>
+          <a href="{% url 'customer_bar_history' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">Bar Orders</a>
+          <a href="{% url 'order_laundry' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">Order Laundry</a>
+          <a href="{% url 'customer_laundry_history' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">Laundry Orders</a>
+          <a href="{% url 'order_spa' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">Book Spa</a>
+          <a href="{% url 'customer_spa_history' %}" class="submenu-link block p-2 rounded-lg text-sm hover:text-white">Spa Bookings</a>
+        </div>
+      </div>
 
-      <a href="{% url 'order_food' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'order_food' %}active{% endif %}">
-        <i data-lucide="utensils" class="w-5 h-5 mr-4"></i>
-        <span>Order Food</span>
-      </a>
-
-      <a href="{% url 'customer_food_history' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_food_history' %}active{% endif %}">
-        <i data-lucide="clipboard-list" class="w-5 h-5 mr-4"></i>
-        <span>Food Orders</span>
-      </a>
-
-      <a href="{% url 'order_drinks' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'order_drinks' %}active{% endif %}">
-        <i data-lucide="wine" class="w-5 h-5 mr-4"></i>
-        <span>Order Drinks</span>
-      </a>
-
-      <a href="{% url 'customer_bar_history' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_bar_history' %}active{% endif %}">
-        <i data-lucide="glass-water" class="w-5 h-5 mr-4"></i>
-        <span>Bar Orders</span>
-      </a>
-
-      <a href="{% url 'order_laundry' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'order_laundry' %}active{% endif %}">
-        <i data-lucide="shirt" class="w-5 h-5 mr-4"></i>
-        <span>Order Laundry</span>
-      </a>
-
-      <a href="{% url 'customer_laundry_history' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_laundry_history' %}active{% endif %}">
-        <i data-lucide="washing-machine" class="w-5 h-5 mr-4"></i>
-        <span>Laundry Orders</span>
-      </a>
-
-      <a href="{% url 'customer_wallet' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_wallet' %}active{% endif %}">
+      <a href="{% url 'customer_wallet' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_wallet' or request.resolver_match.url_name == 'wallet_reload' %}active{% endif %}">
         <i data-lucide="wallet" class="w-5 h-5 mr-4"></i>
         <span>Credit Wallet</span>
       </a>
@@ -110,13 +104,10 @@
         {% if unread_messages %}<span class="ml-auto bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
       </a>
 
-      <!-- LINKED: Profile Settings -->
       <a href="{% url 'customer_profile' %}" class="sidebar-link flex items-center p-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'customer_profile' %}active{% endif %}">
         <i data-lucide="user-cog" class="w-5 h-5 mr-4"></i>
         <span>Profile Settings</span>
       </a>
-      
-     
 
     </nav>
 
@@ -191,6 +182,23 @@
   if(menuButton) menuButton.addEventListener('click', openSidebar);
   if(backdrop) backdrop.addEventListener('click', closeSidebar);
   sidebar.querySelectorAll('nav a').forEach(a => a.addEventListener('click', () => { if(window.innerWidth < 768) closeSidebar(); }));
+
+  // Submenu toggles. Auto-open if the current URL is a child.
+  document.querySelectorAll('[data-toggle]').forEach(btn => {
+    const targetId = btn.getAttribute('data-toggle');
+    const target = document.getElementById(targetId);
+    const chev = btn.querySelector('[data-lucide="chevron-down"]');
+    if (!target) return;
+    if (target.querySelector('a.active') || window.location.pathname && Array.from(target.querySelectorAll('a')).some(a => a.getAttribute('href') === window.location.pathname)) {
+      target.classList.remove('hidden');
+      if (chev) chev.classList.add('rotate-180');
+    }
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      target.classList.toggle('hidden');
+      if (chev) chev.classList.toggle('rotate-180');
+    });
+  });
 </script>
 </body>
 </html>

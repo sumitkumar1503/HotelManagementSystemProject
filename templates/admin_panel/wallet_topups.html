@@ -1,0 +1,73 @@
+{% extends base_template|default:'admin_panel/adminbase.html' %}
+{% block title %}Wallet Top-up Receipts{% endblock %}
+{% block panel_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Wallet Top-up Receipts</h1>
+            <p class="text-gray-500">Confirm guest bank transfers to add credit to their wallet.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="?status=pending" class="px-3 py-2 text-sm rounded-lg border {% if sel_status == 'pending' %}bg-indigo-600 text-white{% else %}bg-white text-gray-700 border-gray-200{% endif %}">
+                Pending{% if pending_count %} ({{ pending_count }}){% endif %}
+            </a>
+            <a href="?status=confirmed" class="px-3 py-2 text-sm rounded-lg border {% if sel_status == 'confirmed' %}bg-indigo-600 text-white{% else %}bg-white text-gray-700 border-gray-200{% endif %}">Confirmed</a>
+            <a href="?status=rejected" class="px-3 py-2 text-sm rounded-lg border {% if sel_status == 'rejected' %}bg-indigo-600 text-white{% else %}bg-white text-gray-700 border-gray-200{% endif %}">Rejected</a>
+            <a href="?status=all" class="px-3 py-2 text-sm rounded-lg border {% if sel_status == 'all' %}bg-indigo-600 text-white{% else %}bg-white text-gray-700 border-gray-200{% endif %}">All</a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+        <table class="rtable w-full text-left min-w-[700px]">
+            <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold border-b">
+                <tr>
+                    <th class="px-6 py-3">Date</th>
+                    <th class="px-6 py-3">Guest</th>
+                    <th class="px-6 py-3">Amount</th>
+                    <th class="px-6 py-3">Reference</th>
+                    <th class="px-6 py-3">Status</th>
+                    <th class="px-6 py-3">Receipt</th>
+                    <th class="px-6 py-3 text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for t in topups %}
+                <tr>
+                    <td data-label="Date" class="px-6 py-3 text-sm text-gray-500">{{ t.created_at|date:"M d, Y H:i" }}</td>
+                    <td data-label="Guest" class="px-6 py-3">
+                        <div class="font-semibold text-gray-800">{{ t.user.get_full_name|default:t.user.username }}</div>
+                        <div class="text-xs text-gray-500">@{{ t.user.username }}</div>
+                    </td>
+                    <td data-label="Amount" class="px-6 py-3 font-bold text-gray-800">{{ site_currency }}{{ t.amount|floatformat:2 }}</td>
+                    <td data-label="Reference" class="px-6 py-3 text-sm text-gray-500">{{ t.note|default:"—" }}</td>
+                    <td data-label="Status" class="px-6 py-3">
+                        {% if t.status == 'confirmed' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Confirmed</span>
+                        {% elif t.status == 'rejected' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">Rejected</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Receipt" class="px-6 py-3">
+                        {% if t.receipt_file %}
+                            <a href="{{ t.receipt_file.url }}" target="_blank" class="text-indigo-600 hover:underline inline-flex items-center gap-1"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> View</a>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td data-label="Action" class="rtable-actions px-6 py-3 text-right">
+                        {% if t.status == 'pending' %}
+                            <a href="{% url 'wallet_topup_decide' t.id %}" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded hover:bg-indigo-100">Review</a>
+                        {% else %}
+                            <span class="text-xs text-gray-400">Reviewed by {{ t.reviewed_by.username|default:"—" }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="p-10 text-center text-gray-500">No top-up receipts here.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'common/_pagination.html' %}
+</div>
+{% endblock %}

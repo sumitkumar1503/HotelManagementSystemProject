@@ -1,0 +1,114 @@
+{% extends base_template|default:'kitchen_panel/kitchenbase.html' %}
+{% block title %}Ingredient Usage{% endblock %}
+{% block panel_content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Ingredient Usage Tracker</h2>
+            <p class="text-gray-500">Log every ingredient consumed in the kitchen. The cost is deducted from revenue in Accounting.</p>
+        </div>
+        <a href="{% url 'kitchen_usage_add' %}" class="px-5 py-2.5 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 shadow transition flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Record Usage
+        </a>
+    </div>
+
+    <form method="get" class="bg-white p-4 rounded-xl border border-gray-100 mb-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div>
+            <label class="text-xs text-gray-500 font-semibold">From</label>
+            <input type="date" name="start" value="{{ sel_start }}" class="form-input w-full text-sm">
+        </div>
+        <div>
+            <label class="text-xs text-gray-500 font-semibold">To</label>
+            <input type="date" name="end" value="{{ sel_end }}" class="form-input w-full text-sm">
+        </div>
+        <div>
+            <label class="text-xs text-gray-500 font-semibold">Month</label>
+            <select name="month" class="form-select w-full text-sm">
+                <option value="">All months</option>
+                {% for num, label in month_choices %}
+                <option value="{{ num }}" {% if sel_month == num|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="text-xs text-gray-500 font-semibold">Year</label>
+            <select name="year" class="form-select w-full text-sm">
+                <option value="">All years</option>
+                {% for y in year_choices %}
+                <option value="{{ y }}" {% if sel_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="text-xs text-gray-500 font-semibold">Ingredient</label>
+            <select name="ingredient" class="form-select w-full text-sm">
+                <option value="">All ingredients</option>
+                {% for ing in ingredients %}
+                <option value="{{ ing.id }}" {% if sel_ingredient == ing.id|stringformat:"s" %}selected{% endif %}>{{ ing.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-span-2 md:col-span-5 flex justify-end gap-2">
+            <a href="{% url 'kitchen_usage_list' %}" class="px-4 py-2 bg-gray-100 text-gray-600 text-sm font-bold rounded-lg hover:bg-gray-200">Clear</a>
+            <button type="submit" class="px-4 py-2 bg-orange-600 text-white text-sm font-bold rounded-lg hover:bg-orange-700">Filter</button>
+        </div>
+    </form>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="text-xs uppercase text-gray-500 font-semibold">Records</div>
+            <div class="text-2xl font-bold text-gray-800">{{ page_obj.paginator.count }}</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="text-xs uppercase text-gray-500 font-semibold">Total Quantity</div>
+            <div class="text-2xl font-bold text-gray-800">{{ total_quantity|floatformat:2 }}</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="text-xs uppercase text-gray-500 font-semibold">Total Cost</div>
+            <div class="text-2xl font-bold text-red-600">{{ site_currency }}{{ total_cost }}</div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-x-auto">
+        <table class="rtable w-full text-left min-w-[700px]">
+            <thead class="bg-gray-50 text-gray-700 text-xs uppercase font-semibold border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4">Ingredient</th>
+                    <th class="px-6 py-4">Quantity</th>
+                    <th class="px-6 py-4">Unit Cost</th>
+                    <th class="px-6 py-4">Total Cost</th>
+                    <th class="px-6 py-4">By</th>
+                    <th class="px-6 py-4">Note</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for u in usages %}
+                <tr class="hover:bg-gray-50/60 transition">
+                    <td data-label="Date" class="px-6 py-4 text-sm text-gray-500">{{ u.used_on|date:"M d, Y" }}</td>
+                    <td data-label="Ingredient" class="px-6 py-4 font-semibold text-gray-800">{{ u.ingredient.name }}</td>
+                    <td data-label="Quantity" class="px-6 py-4 text-sm">{{ u.quantity|floatformat:2 }} {{ u.ingredient.unit }}</td>
+                    <td data-label="Unit Cost" class="px-6 py-4 text-sm text-gray-500">{{ site_currency }}{{ u.unit_cost|floatformat:2 }}</td>
+                    <td data-label="Total Cost" class="px-6 py-4 font-bold text-red-600">{{ site_currency }}{{ u.total_cost|floatformat:2 }}</td>
+                    <td data-label="By" class="px-6 py-4 text-sm">{{ u.used_by.get_full_name|default:u.used_by.username|default:"—" }}</td>
+                    <td data-label="Note" class="px-6 py-4 text-sm text-gray-500">{{ u.note|default:"—" }}</td>
+                    <td class="rtable-actions px-6 py-4 text-right">
+                        <a href="{% url 'kitchen_usage_delete' u.id %}" onclick="return confirm('Reverse this usage entry and refund the stock?');"
+                           class="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100">Reverse</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="p-10 text-center text-gray-500">No usage records match your filters.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'common/_pagination.html' %}
+</div>
+
+<style>
+    .form-input, .form-select { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; outline: none; color: #374151; }
+    .form-input:focus, .form-select:focus { border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+</style>
+{% endblock %}

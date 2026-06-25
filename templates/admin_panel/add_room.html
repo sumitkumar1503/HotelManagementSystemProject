@@ -51,19 +51,29 @@
                     {{ form.description }}
                 </div>
 
-                <!-- Image Upload -->
+                <!-- Image Upload (single primary image) -->
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Room Image</label>
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer relative">
-                         {% if form.instance.room_image %}
-                            <p class="text-sm text-green-600 mb-2">Current: {{ form.instance.room_image.name }}</p>
-                         {% endif %}
-                         <i data-lucide="image-plus" class="w-8 h-8 text-gray-400 mb-2"></i>
-                         <span class="text-sm text-gray-500">Click to upload new image</span>
-                         <div class="opacity-0 absolute inset-0 w-full h-full cursor-pointer">
-                             {{ form.room_image }}
-                         </div>
-                    </div>
+                    {% if form.instance.room_image %}
+                        <div class="flex items-center gap-4 mb-3">
+                            <img src="{{ form.instance.room_image.url }}" alt="Current" class="w-24 h-24 object-cover rounded-lg border">
+                            <p class="text-sm text-gray-600">Current: <span class="font-medium">{{ form.instance.room_image.name }}</span></p>
+                        </div>
+                    {% endif %}
+                    <label for="id_room_image"
+                           class="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer">
+                        <i data-lucide="image-plus" class="w-8 h-8 text-gray-400 mb-2"></i>
+                        <span class="text-sm text-gray-500">Click to upload new image</span>
+                        <span class="mt-2 text-xs text-gray-400" id="room-image-name"></span>
+                    </label>
+                    <input type="file" name="room_image" id="id_room_image" accept="image/*" class="hidden"
+                           onchange="document.getElementById('room-image-name').textContent = this.files[0] ? this.files[0].name : '';">
+                    {% if is_edit %}
+                        <p class="text-xs text-gray-500 mt-2">
+                            Tip: For multiple images (gallery / carousel), use
+                            <a href="{% url 'manage_room_images' form.instance.id %}" class="text-blue-600 hover:underline">Manage Images</a>.
+                        </p>
+                    {% endif %}
                 </div>
 
                 <!-- Availability Checkbox -->

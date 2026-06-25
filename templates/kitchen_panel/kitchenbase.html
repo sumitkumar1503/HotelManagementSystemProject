@@ -19,39 +19,43 @@
 <body class="flex min-h-screen">
   <!-- Sidebar -->
   <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300">
-    <div class="flex items-center justify-center p-6 border-b border-white/20">
-      <i data-lucide="chef-hat" class="w-8 h-8 mr-3 text-orange-300"></i>
-      <h1 class="text-xl font-bold">Kitchen</h1>
+    <div class="flex items-center justify-center p-6 border-b border-white/20 gap-3">
+      {% if site_hotel_logo %}
+        <img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="w-10 h-10 rounded object-cover bg-white/20">
+      {% else %}
+        <i data-lucide="chef-hat" class="w-8 h-8 text-orange-300"></i>
+      {% endif %}
+      <h1 class="text-xl font-bold leading-tight">{{ site_hotel_name|default:"Kitchen" }}</h1>
     </div>
-    
-    <nav class="p-4 space-y-2 flex-1 min-h-0 overflow-y-auto">
-      <!-- Dashboard Link -->
+
+    <nav class="p-4 space-y-1 flex-1 min-h-0 overflow-y-auto">
       <a href="{% url 'kitchen_dashboard' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'kitchen_dashboard' %}active{% endif %}">
         <i data-lucide="utensils" class="w-5 h-5 mr-3"></i> Active Orders
       </a>
-      
-      <!-- Ingredient Inventory -->
-      <a href="{% url 'ingredient_inventory' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'ingredient_inventory' %}active{% endif %}">
-        <i data-lucide="package" class="w-5 h-5 mr-3"></i> Ingredient Inventory
-      </a>
 
-      <!-- Sales Record -->
+      <!-- INVENTORY group -->
+      <div>
+        <button data-toggle="k-inv" class="w-full sidebar-link flex items-center justify-between p-3 rounded-lg">
+          <span class="flex items-center"><i data-lucide="package" class="w-5 h-5 mr-3"></i> Inventory</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+        </button>
+        <div id="k-inv" class="pl-8 pt-1 space-y-1 hidden">
+          <a href="{% url 'ingredient_inventory' %}" class="block p-2 text-sm hover:text-orange-200">Ingredients</a>
+          <a href="{% url 'kitchen_usage_list' %}" class="block p-2 text-sm hover:text-orange-200">Usage Log</a>
+          <a href="{% url 'kitchen_usage_add' %}" class="block p-2 text-sm hover:text-orange-200">+ Record Usage</a>
+        </div>
+      </div>
+
       <a href="{% url 'sales_record' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'sales_record' %}active{% endif %}">
         <i data-lucide="receipt-text" class="w-5 h-5 mr-3"></i> Sales Record
       </a>
-
-      <!-- Messages -->
+      <a href="{% url 'kitchen_history' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'kitchen_history' %}active{% endif %}">
+        <i data-lucide="history" class="w-5 h-5 mr-3"></i> Order History
+      </a>
       <a href="{% url 'inbox' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
         <i data-lucide="mail" class="w-5 h-5 mr-3"></i> Messages
         {% if unread_messages %}<span class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">{{ unread_messages }}</span>{% endif %}
       </a>
-
-      <!-- History Link -->
-      <a href="{% url 'kitchen_history' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'kitchen_history' %}active{% endif %}">
-        <i data-lucide="history" class="w-5 h-5 mr-3"></i> History
-      </a>
-
-      <!-- NEW: Profile Link -->
       <a href="{% url 'kitchen_profile' %}" class="sidebar-link flex items-center p-3 rounded-lg {% if request.resolver_match.url_name == 'kitchen_profile' %}active{% endif %}">
         <i data-lucide="user-circle" class="w-5 h-5 mr-3"></i> My Profile
       </a>
@@ -125,6 +129,14 @@
       if(btn) btn.addEventListener('click', open);
       if(backdrop) backdrop.addEventListener('click', close);
       sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { if(window.innerWidth < 768) close(); }));
+
+      document.querySelectorAll('[data-toggle]').forEach(b => {
+        const t = document.getElementById(b.getAttribute('data-toggle'));
+        const chev = b.querySelector('[data-lucide="chevron-down"]');
+        if (!t) return;
+        if (Array.from(t.querySelectorAll('a')).some(a => a.getAttribute('href') === window.location.pathname)) { t.classList.remove('hidden'); if (chev) chev.classList.add('rotate-180'); }
+        b.addEventListener('click', (e) => { e.preventDefault(); t.classList.toggle('hidden'); if (chev) chev.classList.toggle('rotate-180'); });
+      });
     })();
   </script>
 </body>

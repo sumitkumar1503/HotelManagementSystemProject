@@ -44,19 +44,38 @@
   if (!btn) return;
 
   let lastUnread = parseInt(badge ? (badge.textContent || '0') : '0', 10) || 0;
+  // Re-ring every 2 minutes while there are still unread notifications.
+  const REPEAT_RING_MS = 120000;
+  let ringTimer = null;
 
-  function beep() {
+  function beep(pattern) {
+    pattern = pattern || [880];
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.type = 'sine'; o.frequency.value = 880;
-      g.gain.setValueAtTime(0.001, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      o.start(); o.stop(ctx.currentTime + 0.5);
+      pattern.forEach(function (freq, i) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine'; o.frequency.value = freq;
+        const t0 = ctx.currentTime + i * 0.55;
+        g.gain.setValueAtTime(0.001, t0);
+        g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.5);
+        o.start(t0); o.stop(t0 + 0.5);
+      });
     } catch (e) { /* sound not allowed yet */ }
+  }
+
+  function startRinger() {
+    if (ringTimer) return;
+    ringTimer = setInterval(function () {
+      if (lastUnread > 0) beep([880, 660, 880]);
+      else stopRinger();
+    }, REPEAT_RING_MS);
+  }
+
+  function stopRinger() {
+    if (ringTimer) { clearInterval(ringTimer); ringTimer = null; }
   }
 
   btn.addEventListener('click', function (e) {
@@ -95,8 +114,9 @@
           if (d.unread > 0) { badge.textContent = d.unread; badge.classList.remove('hidden'); }
           else { badge.classList.add('hidden'); }
         }
-        if (d.unread > lastUnread) beep();
+        if (d.unread > lastUnread) beep([880, 660, 880]);
         lastUnread = d.unread;
+        if (lastUnread > 0) startRinger(); else stopRinger();
         render(d.items || []);
       })
       .catch(function () {});
@@ -105,10 +125,12 @@
   if (markAll) {
     markAll.addEventListener('click', function () {
       fetch('/notifications/read-all/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(function () { lastUnread = 0; poll(); });
+        .then(function () { lastUnread = 0; stopRinger(); poll(); });
     });
   }
 
+  // Kick off the ringer immediately if the page already shows unread items.
+  if (lastUnread > 0) startRinger();
   setInterval(poll, 20000);
 })();
 </script>
