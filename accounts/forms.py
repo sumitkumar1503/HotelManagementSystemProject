@@ -49,6 +49,11 @@ class EmployeeCreationForm(UserCreationForm):
     years_of_experience = forms.IntegerField(min_value=0, widget=forms.NumberInput(attrs={'class': 'form-input'}))
     branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False,
                                     widget=forms.Select(attrs={'class': 'form-select'}), empty_label="No Branch")
+    # Managers can be assigned multiple branches/locations to view & switch between.
+    assigned_branches = forms.ModelMultipleChoiceField(
+        queryset=Branch.objects.filter(is_active=True), required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': '5'}),
+        help_text="For Managers only: hold Ctrl/Cmd to select the branches this manager may access.")
 
     class Meta(UserCreationForm.Meta):
         model = CustomUser
@@ -68,7 +73,7 @@ class EmployeeCreationForm(UserCreationForm):
         if commit:
             user.save()
             # 2. Create the Employee Profile
-            Employee.objects.create(
+            profile = Employee.objects.create(
                 user=user,
                 job_type=self.cleaned_data['job_type'],
                 salary=self.cleaned_data['salary'],
@@ -76,6 +81,9 @@ class EmployeeCreationForm(UserCreationForm):
                 years_of_experience=self.cleaned_data['years_of_experience'],
                 branch=self.cleaned_data.get('branch'),
             )
+            # Only managers get assigned branches.
+            if self.cleaned_data['job_type'] == 'manager':
+                profile.assigned_branches.set(self.cleaned_data.get('assigned_branches') or [])
         return user
 
 class EmployeeEditForm(forms.ModelForm):
@@ -86,6 +94,10 @@ class EmployeeEditForm(forms.ModelForm):
     years_of_experience = forms.IntegerField(min_value=0, widget=forms.NumberInput(attrs={'class': 'form-input'}))
     branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False,
                                     widget=forms.Select(attrs={'class': 'form-select'}), empty_label="No Branch")
+    assigned_branches = forms.ModelMultipleChoiceField(
+        queryset=Branch.objects.filter(is_active=True), required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': '5'}),
+        help_text="For Managers only: hold Ctrl/Cmd to select the branches this manager may access.")
 
     class Meta:
         model = CustomUser
@@ -108,6 +120,7 @@ class EmployeeEditForm(forms.ModelForm):
             self.fields['id_card_number'].initial = profile.id_card_number
             self.fields['years_of_experience'].initial = profile.years_of_experience
             self.fields['branch'].initial = profile.branch
+            self.fields['assigned_branches'].initial = profile.assigned_branches.all()
 
     def save(self, commit=True):
         # 1. Save User fields
@@ -122,6 +135,11 @@ class EmployeeEditForm(forms.ModelForm):
             profile.years_of_experience = self.cleaned_data['years_of_experience']
             profile.branch = self.cleaned_data.get('branch')
             profile.save()
+            # Assigned branches are only meaningful for managers.
+            if self.cleaned_data['job_type'] == 'manager':
+                profile.assigned_branches.set(self.cleaned_data.get('assigned_branches') or [])
+            else:
+                profile.assigned_branches.clear()
         return user
 
 

@@ -70,6 +70,16 @@
             <p class="text-xs text-emerald-600 mt-1 font-semibold">Laundry profit: {{ site_currency }}{{ laundry_profit|floatformat:2 }}</p>
         </div>
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center gap-2 text-pink-500 mb-2"><i data-lucide="flower-2" class="w-5 h-5"></i><span class="text-xs font-bold uppercase">Spa Orders</span></div>
+            <p class="text-2xl font-black text-gray-800">{{ site_currency }}{{ spa_total|floatformat:2 }}</p>
+            <p class="text-xs text-emerald-600 mt-1 font-semibold">Spa profit: {{ site_currency }}{{ spa_profit|floatformat:2 }}</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center gap-2 text-orange-500 mb-2"><i data-lucide="carrot" class="w-5 h-5"></i><span class="text-xs font-bold uppercase">Kitchen Ingredient Cost</span></div>
+            <p class="text-2xl font-black text-gray-800">{{ site_currency }}{{ kitchen_cost|floatformat:2 }}</p>
+            <p class="text-xs text-gray-400 mt-1 font-semibold">Ingredients used</p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
             <div class="flex items-center gap-2 text-rose-500 mb-2"><i data-lucide="trending-down" class="w-5 h-5"></i><span class="text-xs font-bold uppercase">Expenses</span></div>
             <p class="text-2xl font-black text-gray-800">{{ site_currency }}{{ expenses_total|floatformat:2 }}</p>
         </div>
@@ -84,8 +94,10 @@
                 <div class="flex justify-between text-gray-600"><span>Food orders</span><span class="font-semibold">{{ site_currency }}{{ food_total|floatformat:2 }}</span></div>
                 <div class="flex justify-between text-gray-600"><span>Bar orders</span><span class="font-semibold">{{ site_currency }}{{ bar_total|floatformat:2 }}</span></div>
                 <div class="flex justify-between text-gray-600"><span>Laundry orders</span><span class="font-semibold">{{ site_currency }}{{ laundry_total|floatformat:2 }}</span></div>
+                <div class="flex justify-between text-gray-600"><span>Spa orders</span><span class="font-semibold">{{ site_currency }}{{ spa_total|floatformat:2 }}</span></div>
                 <div class="flex justify-between text-gray-800 font-bold border-t pt-2"><span>Combined revenue</span><span>{{ site_currency }}{{ combined_revenue|floatformat:2 }}</span></div>
                 <div class="flex justify-between text-rose-600"><span>Less: total expenses</span><span class="font-semibold">- {{ site_currency }}{{ expenses_total|floatformat:2 }}</span></div>
+                <div class="flex justify-between text-rose-600"><span>Less: kitchen ingredient cost</span><span class="font-semibold">- {{ site_currency }}{{ kitchen_cost|floatformat:2 }}</span></div>
             </div>
             <div class="mt-5 p-5 rounded-xl {% if is_profit %}bg-emerald-50{% else %}bg-rose-50{% endif %}">
                 <p class="text-xs uppercase font-bold {% if is_profit %}text-emerald-600{% else %}text-rose-600{% endif %}">

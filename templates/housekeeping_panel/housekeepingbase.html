@@ -65,12 +65,12 @@
   <aside id="sidebar" class="sidebar w-64 flex-shrink-0 fixed inset-y-0 left-0 z-30 flex flex-col transform -translate-x-full md:translate-x-0 shadow-xl transition-transform duration-300">
     <!-- Brand Logo Area -->
     <div class="flex items-center justify-center p-6 border-b border-white/30 gap-3">
-      {% if site_hotel_logo %}
-        <img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="w-10 h-10 rounded object-cover bg-white/20">
+      {% if site_business_logo %}
+        <img src="{{ site_business_logo }}" alt="{{ site_business_name }}" class="w-10 h-10 rounded object-cover bg-white/20">
       {% else %}
         <i data-lucide="sparkles" class="w-8 h-8 text-yellow-300"></i>
       {% endif %}
-      <h1 class="text-xl font-bold tracking-wide leading-tight">{{ site_hotel_name|default:"Housekeeping" }}</h1>
+      <h1 class="text-xl font-bold tracking-wide leading-tight">{{ site_business_name|default:"Housekeeping" }}</h1>
     </div>
 
     <nav class="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-2">
@@ -129,7 +129,8 @@
         <button id="menu-button" class="mr-2 md:hidden">
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
-        <span class="brand-text">{{ site_hotel_name|default:"Grand Hotel" }} Staff</span>
+        <span class="brand-text">{{ site_business_name|default:"Grand Hotel" }} Staff</span>
+        {% include 'common/_branch_badge.html' %}
       </div>
       
       <!-- Right: Profile -->

@@ -21,12 +21,12 @@
 <body class="flex min-h-screen">
   <aside id="sidebar" class="sidebar w-64 fixed inset-y-0 left-0 z-30 shadow-xl transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col">
     <div class="flex items-center justify-center p-6 border-b border-white/20 gap-3">
-      {% if site_hotel_logo %}
-        <img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="w-10 h-10 rounded object-cover bg-white/20">
+      {% if site_business_logo %}
+        <img src="{{ site_business_logo }}" alt="{{ site_business_name }}" class="w-10 h-10 rounded object-cover bg-white/20">
       {% else %}
         <i data-lucide="wine" class="w-8 h-8 text-pink-300"></i>
       {% endif %}
-      <h1 class="text-xl font-bold leading-tight">{{ site_hotel_name|default:"Bar" }}</h1>
+      <h1 class="text-xl font-bold leading-tight">{{ site_business_name|default:"Bar" }}</h1>
     </div>
 
     <nav class="p-4 space-y-2 flex-1 min-h-0 overflow-y-auto">
@@ -85,6 +85,7 @@
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
         <span class="font-bold text-gray-800">Bar Station</span>
+        {% include 'common/_branch_badge.html' %}
       </div>
       <div class="text-gray-700">
         {% include 'common/_notification_bell.html' %}

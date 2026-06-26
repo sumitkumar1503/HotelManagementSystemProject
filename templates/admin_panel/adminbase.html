@@ -87,12 +87,12 @@
   <aside id="sidebar" class="sidebar w-64 flex-shrink-0 fixed inset-y-0 left-0 z-30 flex flex-col transform -translate-x-full md:translate-x-0 shadow-xl">
     <!-- Brand Logo Area -->
     <div class="flex items-center justify-center p-6 border-b border-white/30">
-      {% if site_hotel_logo %}
-        <img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="w-9 h-9 mr-3 rounded object-cover bg-white/20">
+      {% if site_business_logo %}
+        <img src="{{ site_business_logo }}" alt="{{ site_business_name }}" class="w-9 h-9 mr-3 rounded object-cover bg-white/20">
       {% else %}
         <i data-lucide="hotel" class="w-8 h-8 mr-3 text-yellow-300"></i>
       {% endif %}
-      <h1 class="text-2xl font-bold tracking-wide">{{ site_hotel_name|default:"Grand Hotel" }}</h1>
+      <h1 class="text-2xl font-bold tracking-wide">{{ site_business_name|default:"Grand Hotel" }}</h1>
     </div>
 
     <nav class="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-2">
@@ -243,7 +243,7 @@
         </button>
         <div id="settings-sub" class="pl-8 pt-1 space-y-1 hidden">
           <a href="{% url 'payment_settings' %}" class="submenu-link block p-2 rounded-lg text-sm">Payment Settings</a>
-          <a href="{% url 'site_settings' %}" class="submenu-link block p-2 rounded-lg text-sm">Hotel / Currency / VAT</a>
+          <a href="{% url 'site_settings' %}" class="submenu-link block p-2 rounded-lg text-sm">Business / Currency / VAT</a>
           <a href="{% url 'site_content' %}" class="submenu-link block p-2 rounded-lg text-sm">Website Content</a>
         </div>
       </div>
@@ -275,6 +275,7 @@
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
         <span class="brand-text">Admin Panel</span>
+        {% include 'common/_branch_badge.html' %}
       </div>
       
       <!-- Center: Search -->

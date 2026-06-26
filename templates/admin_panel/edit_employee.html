@@ -80,6 +80,15 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Experience (Years)</label>
                     {{ form.years_of_experience }}
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Primary Branch</label>
+                    {{ form.branch }}
+                </div>
+                <div class="md:col-span-2" id="assigned-branches-wrap">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Assigned Branches <span class="text-xs text-gray-400">(Managers only)</span></label>
+                    {{ form.assigned_branches }}
+                    <p class="text-xs text-gray-500 mt-1">Select every branch/location this manager may view and switch between. Hold Ctrl (Cmd on Mac) to pick more than one.</p>
+                </div>
 
                 <!-- Profile Pic -->
                 <div class="md:col-span-2 flex items-center gap-4 border p-4 rounded-lg bg-gray-50">
@@ -106,4 +115,14 @@
         </form>
     </div>
 </div>
+<script>
+  (function(){
+    const jobSelect = document.querySelector('[name="job_type"]');
+    const wrap = document.getElementById('assigned-branches-wrap');
+    if(!jobSelect || !wrap) return;
+    const sync = () => { wrap.style.display = (jobSelect.value === 'manager') ? '' : 'none'; };
+    jobSelect.addEventListener('change', sync);
+    sync();
+  })();
+</script>
 {% endblock %}

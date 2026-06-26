@@ -9,6 +9,8 @@ urlpatterns = [
     path('', views.index, name='home'),
     path('about/', views.about_us, name='about'),
     path('login/', views.login_view, name='login'),
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('reset-password/', views.reset_password, name='reset_password'),
     path('signup/', views.register_customer, name='signup'),
     path('logout/', LogoutView.as_view(next_page='home'), name='logout'),
     path('rooms/', views.room_list, name='room_list'), # New Page

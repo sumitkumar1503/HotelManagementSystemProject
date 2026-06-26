@@ -1,12 +1,14 @@
 {% extends 'common/homebase.html' %}
 {% block content %}
 
-<div class="text-center mb-12">
+<div class="text-center mb-8">
     <h1 class="text-4xl font-extrabold text-gray-900 mb-4">Our Luxurious Accommodations</h1>
     <p class="text-xl text-gray-500 max-w-2xl mx-auto">
         Choose from our wide range of rooms and suites designed for your comfort.
     </p>
 </div>
+
+{% include 'common/_room_search.html' %}
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {% for room in rooms %}

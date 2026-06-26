@@ -1,0 +1,83 @@
+{% comment %}
+Reusable room/hotel search & filter bar.
+Works for both anonymous (public) and logged-in guests; posts via GET to room_list.
+{% endcomment %}
+<form method="get" action="{% url 'room_list' %}"
+      class="bg-white rounded-2xl shadow-md border border-gray-100 p-4 md:p-5 mb-8">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+    <div class="lg:col-span-2">
+      <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Location</label>
+      <input type="text" name="location" value="{{ sel_location }}"
+             list="branch-locations"
+             placeholder="Hotel name, city, locality or address"
+             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+      <datalist id="branch-locations">
+        {% for b in branch_locations %}
+          <option value="{{ b.name }}"></option>
+          {% if b.city %}<option value="{{ b.city }}"></option>{% endif %}
+        {% endfor %}
+      </datalist>
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Property Type</label>
+      <select name="room_type"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+        <option value="">Any type</option>
+        {% for val, label in room_type_choices %}
+          <option value="{{ val }}" {% if sel_room_type == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Guests / Beds</label>
+      <input type="number" name="guests" min="1" value="{{ sel_guests }}" placeholder="Any"
+             class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end mt-3">
+    <div>
+      <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Check-in</label>
+      <input type="date" name="check_in" value="{{ sel_check_in }}"
+             class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Check-out</label>
+      <input type="date" name="check_out" value="{{ sel_check_out }}"
+             class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Min Price</label>
+      <input type="number" name="price_min" min="0" step="0.01" value="{{ sel_price_min }}" placeholder="0"
+             class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Max Price</label>
+      <input type="number" name="price_max" min="0" step="0.01" value="{{ sel_price_max }}" placeholder="Any"
+             class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+    </div>
+    <div class="flex gap-2">
+      <button type="submit"
+              class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition">
+        <i class="fa-solid fa-magnifying-glass"></i> Search
+      </button>
+      {% if filtered %}
+      <a href="{% url 'room_list' %}"
+         class="inline-flex items-center justify-center px-3 py-2.5 border border-gray-300 text-gray-500 text-sm font-semibold rounded-lg hover:bg-gray-50"
+         title="Clear filters">
+        <i class="fa-solid fa-xmark"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if sel_q %}<input type="hidden" name="q" value="{{ sel_q }}">{% endif %}
+</form>
+
+{% if filtered %}
+<p class="text-sm text-gray-500 mb-4">
+  Showing <span class="font-semibold text-gray-700">{{ rooms|length }}</span> result{{ rooms|length|pluralize }}
+  {% if sel_location %}in "<span class="font-semibold">{{ sel_location }}</span>"{% endif %}
+  {% if sel_check_in and sel_check_out %}available {{ sel_check_in }} → {{ sel_check_out }}{% endif %}.
+</p>
+{% endif %}

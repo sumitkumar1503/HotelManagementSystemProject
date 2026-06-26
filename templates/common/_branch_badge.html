@@ -1,0 +1,16 @@
+{% comment %}
+Branch identity badge — shows the name + logo of the branch the current
+guest/staff is logged into / checked into. Rendered BESIDE the business name.
+Neutral white pill so it's visible on both dark and light top bars.
+{% endcomment %}
+{% if site_branch_name %}
+<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white text-gray-700 border border-gray-200 shadow-sm"
+      title="Current branch / location">
+  {% if site_branch_logo %}
+    <img src="{{ site_branch_logo }}" alt="{{ site_branch_name }}" class="w-5 h-5 rounded-full object-cover">
+  {% else %}
+    <i data-lucide="map-pin" class="w-4 h-4 text-indigo-500"></i>
+  {% endif %}
+  <span class="text-xs font-semibold whitespace-nowrap">{{ site_branch_name }}</span>
+</span>
+{% endif %}

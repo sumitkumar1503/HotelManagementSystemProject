@@ -69,7 +69,9 @@
                         <label for="remember-me" class="ml-2 block text-sm text-gray-900 cursor-pointer">Remember me</label>
                     </div>
 
-                   
+                    <a href="{% url 'forgot_password' %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition">
+                        Forgot password?
+                    </a>
                 </div>
 
                 <div>
@@ -93,6 +95,9 @@
                 </div>
                 <div class="mt-4 text-center">
                     <p class="text-xs text-gray-400">Admins, Receptionists, HouseKeeping and Kitchen Staff use the same form.</p>
+                    <a href="{% url 'forgot_password' %}" class="inline-block mt-2 text-sm font-semibold text-indigo-600 hover:text-indigo-500 transition">
+                        <i class="fa-solid fa-key mr-1"></i> Reset Password
+                    </a>
                 </div>
             </div>
         </div>

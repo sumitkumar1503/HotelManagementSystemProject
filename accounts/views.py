@@ -100,12 +100,20 @@ def index(request):
     })
 
 def room_list(request):
-    # ---- Optional date-range filter (works for both anonymous and logged in users) --
-    qs = Room.objects.exclude(room_status='maintenance').order_by('room_number')
+    # ---- Search & filter bar (works for both anonymous and logged in guests) ----
+    # Supports searching different hotels/shortlets by name, branch location and
+    # address, plus room type, price range, guests and date availability.
+    qs = Room.objects.exclude(room_status='maintenance').select_related('branch').order_by('room_number')
 
     check_in_str = (request.GET.get('check_in') or '').strip()
     check_out_str = (request.GET.get('check_out') or '').strip()
     q_text = (request.GET.get('q') or '').strip()
+    location = (request.GET.get('location') or '').strip()
+    room_type = (request.GET.get('room_type') or '').strip()
+    price_min = (request.GET.get('price_min') or '').strip()
+    price_max = (request.GET.get('price_max') or '').strip()
+    guests = (request.GET.get('guests') or '').strip()
+
     filter_check_in = filter_check_out = None
     try:
         if check_in_str:
@@ -115,25 +123,67 @@ def room_list(request):
     except ValueError:
         filter_check_in = filter_check_out = None
 
-    # Text search across room number / type / description.
+    # Keyword search across room number / type / description AND the hotel /
+    # branch identity (name, code, city, address) so guests can find a property.
     if q_text:
         qs = qs.filter(
             Q(room_number__icontains=q_text) |
             Q(room_type__icontains=q_text) |
-            Q(description__icontains=q_text)
+            Q(description__icontains=q_text) |
+            Q(branch__name__icontains=q_text) |
+            Q(branch__city__icontains=q_text) |
+            Q(branch__address__icontains=q_text)
         )
 
-    if filter_check_in and filter_check_out and filter_check_in < filter_check_out:
+    # Location filter: hotel/shortlet name, branch location or address.
+    if location:
+        qs = qs.filter(
+            Q(branch__name__icontains=location) |
+            Q(branch__city__icontains=location) |
+            Q(branch__address__icontains=location) |
+            Q(branch__code__icontains=location)
+        )
+
+    if room_type:
+        qs = qs.filter(room_type=room_type)
+
+    try:
+        if price_min:
+            qs = qs.filter(price_per_night__gte=Decimal(price_min))
+    except (ValueError, ArithmeticError):
+        pass
+    try:
+        if price_max:
+            qs = qs.filter(price_per_night__lte=Decimal(price_max))
+    except (ValueError, ArithmeticError):
+        pass
+
+    if guests.isdigit() and int(guests) > 0:
+        qs = qs.filter(capacity__gte=int(guests))
+
+    dates_ok = bool(filter_check_in and filter_check_out and filter_check_in < filter_check_out)
+    if dates_ok:
         # Restrict to rooms actually available for the requested dates.
         qs = [r for r in qs if room_is_available(r, filter_check_in, filter_check_out)]
 
     rooms = _annotate_room_availability(qs)
+
+    # Distinct locations for the dropdown (active branches with rooms).
+    branch_locations = Branch.objects.filter(is_active=True).order_by('name')
+
     ctx = {
         'rooms': rooms,
         'sel_check_in': check_in_str,
         'sel_check_out': check_out_str,
         'sel_q': q_text,
-        'filtered': bool(filter_check_in and filter_check_out and filter_check_in < filter_check_out),
+        'sel_location': location,
+        'sel_room_type': room_type,
+        'sel_price_min': price_min,
+        'sel_price_max': price_max,
+        'sel_guests': guests,
+        'room_type_choices': Room.ROOM_TYPES,
+        'branch_locations': branch_locations,
+        'filtered': dates_ok or bool(q_text or location or room_type or price_min or price_max or guests),
     }
     # Logged-in guests keep their dashboard sidebar while browsing rooms.
     if request.user.is_authenticated and request.user.role == 'customer':
@@ -254,6 +304,81 @@ def login_view(request):
     else:
         form = AuthenticationForm()
     return render(request, 'common/login.html', {'form': form})
+
+
+# ---------------------------------------------------------------------------
+# FORGOT / RESET PASSWORD (self-service, identity-verified — no email server
+# required so it works on any deployment).
+# ---------------------------------------------------------------------------
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as _PwValidationError
+
+
+def forgot_password(request):
+    """Step 1 — verify identity (username + registered email)."""
+    if request.user.is_authenticated:
+        return redirect('home')
+
+    if request.method == 'POST':
+        username = (request.POST.get('username') or '').strip()
+        email = (request.POST.get('email') or '').strip()
+        user = CustomUser.objects.filter(username__iexact=username).first()
+        # Match on email when the account has one on file; this keeps the flow
+        # usable for staff accounts that may not have a registered email.
+        identity_ok = bool(user) and (
+            (user.email and email and user.email.lower() == email.lower())
+            or (not user.email and not email)
+        )
+        if identity_ok:
+            request.session['pw_reset_uid'] = user.id
+            request.session['pw_reset_ok'] = True
+            messages.success(request, "Identity verified. Please set a new password.")
+            return redirect('reset_password')
+        messages.error(request, "We couldn't match that username and email. Please try again or contact the front desk.")
+
+    return render(request, 'common/forgot_password.html')
+
+
+def reset_password(request):
+    """Step 2 — set a new password for the verified account."""
+    if request.user.is_authenticated:
+        return redirect('home')
+
+    uid = request.session.get('pw_reset_uid')
+    if not uid or not request.session.get('pw_reset_ok'):
+        messages.error(request, "Please verify your identity first.")
+        return redirect('forgot_password')
+
+    user = CustomUser.objects.filter(id=uid).first()
+    if not user:
+        request.session.pop('pw_reset_uid', None)
+        request.session.pop('pw_reset_ok', None)
+        return redirect('forgot_password')
+
+    if request.method == 'POST':
+        p1 = request.POST.get('password1') or ''
+        p2 = request.POST.get('password2') or ''
+        errors = []
+        if p1 != p2:
+            errors.append("The two passwords don't match.")
+        else:
+            try:
+                validate_password(p1, user)
+            except _PwValidationError as e:
+                errors.extend(e.messages)
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+        else:
+            user.set_password(p1)
+            user.save()
+            request.session.pop('pw_reset_uid', None)
+            request.session.pop('pw_reset_ok', None)
+            messages.success(request, "Your password has been reset. Please sign in with your new password.")
+            return redirect('login')
+
+    return render(request, 'common/reset_password.html', {'reset_user': user})
+
 
 # --- ROLE SPECIFIC DASHBOARDS ---
 from django.db.models.functions import TruncMonth
@@ -2144,7 +2269,7 @@ def delete_message(request, message_id):
 # MULTI-BRANCH MANAGEMENT (Admin + Manager)
 # ===========================================================================
 @login_required
-@employee_required(allowed_jobs=['manager'])
+@admin_required
 def manage_branches(request):
     branches = Branch.objects.all()
     page_obj = paginate(request, branches)
@@ -2161,7 +2286,7 @@ def manage_branches(request):
 
 
 @login_required
-@employee_required(allowed_jobs=['manager'])
+@admin_required
 def add_branch(request):
     if request.method == 'POST':
         form = BranchForm(request.POST, request.FILES)
@@ -2175,7 +2300,7 @@ def add_branch(request):
 
 
 @login_required
-@employee_required(allowed_jobs=['manager'])
+@admin_required
 def edit_branch(request, branch_id):
     branch = get_object_or_404(Branch, id=branch_id)
     if request.method == 'POST':
@@ -2190,7 +2315,7 @@ def edit_branch(request, branch_id):
 
 
 @login_required
-@employee_required(allowed_jobs=['manager'])
+@admin_required
 def delete_branch(request, branch_id):
     branch = get_object_or_404(Branch, id=branch_id)
     name = branch.name
@@ -2201,33 +2326,69 @@ def delete_branch(request, branch_id):
 
 @login_required
 def switch_branch(request, branch_id):
-    # Only admin/manager can switch the active branch context.
-    is_manager = request.user.role == 'admin' or (
-        request.user.role == 'employee' and hasattr(request.user, 'employee_profile')
-        and request.user.employee_profile.job_type == 'manager'
-    )
-    if not is_manager:
+    user = request.user
+    is_admin = user.role == 'admin'
+    is_manager = (user.role == 'employee' and hasattr(user, 'employee_profile')
+                  and user.employee_profile.job_type == 'manager')
+    if not (is_admin or is_manager):
         return redirect('home')
 
     if branch_id == 0:
         request.session.pop('active_branch_id', None)
-        messages.info(request, "Now viewing ALL branches.")
+        messages.info(request, "Now viewing all your branches.")
     else:
         branch = get_object_or_404(Branch, id=branch_id)
+        # Managers may only switch to branches the admin assigned to them.
+        if is_manager:
+            allowed_ids = set(user.employee_profile.allowed_branches().values_list('id', flat=True))
+            if branch.id not in allowed_ids:
+                messages.error(request, "You don't have access to that branch. Ask the admin to assign it to you.")
+                return redirect('manager_dashboard')
         request.session['active_branch_id'] = branch.id
-        messages.success(request, f"Switched to {branch.name}. Dashboard, rooms, staff, menu, orders, reports and the hotel name/logo now reflect this branch.")
+        messages.success(request, f"Switched to {branch.name}. Dashboard, rooms, staff, menu, orders and reports now reflect this branch.")
 
-    # Send the user to their dashboard so the branch change is immediately visible.
-    if request.user.role == 'admin':
+    if is_admin:
         return redirect('admin_dashboard')
     return redirect('manager_dashboard')
+
+
+def _manager_branch_ids(request):
+    """
+    Branch IDs a manager is restricted to (their assigned branches), or None
+    when the user is not a manager / has no restriction (admin sees everything).
+    """
+    user = getattr(request, 'user', None)
+    if user is None or not user.is_authenticated:
+        return None
+    if user.role == 'employee' and hasattr(user, 'employee_profile') \
+            and user.employee_profile.job_type == 'manager':
+        return list(user.employee_profile.allowed_branches().values_list('id', flat=True))
+    return None
+
+
+def _switchable_branches(request):
+    """Branches the current user may switch between (for the UI switcher)."""
+    user = getattr(request, 'user', None)
+    if user is None or not user.is_authenticated:
+        return Branch.objects.none()
+    if user.role == 'admin':
+        return Branch.objects.filter(is_active=True)
+    if user.role == 'employee' and hasattr(user, 'employee_profile') \
+            and user.employee_profile.job_type == 'manager':
+        return user.employee_profile.allowed_branches()
+    return Branch.objects.none()
 
 
 def _active_branch(request):
     """Return the Branch the admin/manager is currently scoped to (or None = all)."""
     bid = request.session.get('active_branch_id')
     if bid:
-        return Branch.objects.filter(id=bid).first()
+        branch = Branch.objects.filter(id=bid).first()
+        # Defensive: a manager must never be scoped to a non-assigned branch.
+        allowed = _manager_branch_ids(request)
+        if branch and allowed is not None and branch.id not in allowed:
+            return None
+        return branch
     return None
 
 
@@ -2266,16 +2427,23 @@ def _branch_menu_filter(queryset, branch):
 @login_required
 @employee_required(allowed_jobs=['manager'])
 def manager_dashboard(request):
-    active_branch_id = request.session.get('active_branch_id')
+    active = _active_branch(request)
 
     bookings = Booking.objects.filter(is_cancelled=False)
     rooms = Room.objects.all()
     staff = Employee.objects.all()
 
-    if active_branch_id:
-        bookings = bookings.filter(branch_id=active_branch_id)
-        rooms = rooms.filter(branch_id=active_branch_id)
-        staff = staff.filter(branch_id=active_branch_id)
+    # Managers are restricted to the branches the admin assigned to them.
+    allowed_ids = _manager_branch_ids(request)
+    if active:
+        bookings = bookings.filter(branch=active)
+        rooms = rooms.filter(branch=active)
+        staff = staff.filter(branch=active)
+    elif allowed_ids is not None:
+        # "All" for a manager == all of their assigned branches only.
+        bookings = bookings.filter(branch_id__in=allowed_ids)
+        rooms = rooms.filter(branch_id__in=allowed_ids)
+        staff = staff.filter(branch_id__in=allowed_ids)
 
     total_revenue = bookings.filter(is_paid=True).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
     total_bookings = bookings.count()
@@ -2290,8 +2458,8 @@ def manager_dashboard(request):
         'occupancy_rate': occupancy,
         'staff_count': staff.count(),
         'recent_bookings': bookings.select_related('user', 'room').order_by('-id')[:8],
-        'branches': Branch.objects.filter(is_active=True),
-        'active_branch': _active_branch(request),
+        'branches': _switchable_branches(request),
+        'active_branch': active,
     }
     return render(request, 'manager_panel/dashboard.html', context)
 
@@ -2467,6 +2635,17 @@ def accounting_report(request):
         spa = spa.filter(booking__branch=active)
         expenses = expenses.filter(branch=active)
         kitchen_usage = kitchen_usage.filter(Q(branch=active) | Q(branch__isnull=True))
+    else:
+        # Manager "All" view is limited to the branches assigned to them.
+        allowed_ids = _manager_branch_ids(request)
+        if allowed_ids is not None:
+            bookings = bookings.filter(branch_id__in=allowed_ids)
+            food = food.filter(booking__branch_id__in=allowed_ids)
+            bar = bar.filter(booking__branch_id__in=allowed_ids)
+            laundry = laundry.filter(booking__branch_id__in=allowed_ids)
+            spa = spa.filter(booking__branch_id__in=allowed_ids)
+            expenses = expenses.filter(branch_id__in=allowed_ids)
+            kitchen_usage = kitchen_usage.filter(Q(branch_id__in=allowed_ids) | Q(branch__isnull=True))
 
     bookings_total = bookings.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0')
     food_total = food.aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0')

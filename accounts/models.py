@@ -101,8 +101,22 @@ class Employee(models.Model):
 
     branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='staff')
 
+    # Managers can be granted access to multiple branches/locations by the admin.
+    # The manager may then see and switch between ONLY these assigned branches.
+    assigned_branches = models.ManyToManyField('Branch', blank=True, related_name='managers',
+                                               help_text="Branches a manager is allowed to view and switch between.")
+
     def __str__(self):
         return f"{self.user.username} - {self.get_job_type_display()}"
+
+    def allowed_branches(self):
+        """Branches this manager may operate on (assigned, else their own branch)."""
+        qs = self.assigned_branches.filter(is_active=True)
+        if qs.exists():
+            return qs
+        if self.branch_id:
+            return Branch.objects.filter(id=self.branch_id)
+        return Branch.objects.none()
 
 
 

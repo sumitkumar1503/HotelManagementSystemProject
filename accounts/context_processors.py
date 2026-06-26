@@ -52,7 +52,7 @@ def _display_branch(request):
 
 
 def site_globals(request):
-    """Expose currency/VAT, hotel identity (per active branch), unread messages and branch list."""
+    """Expose currency/VAT, business + branch identity, unread messages and branch list."""
     ctx = {
         'site_currency': '$',
         'site_currency_code': 'USD',
@@ -62,6 +62,13 @@ def site_globals(request):
         'site_hotel_address': '',
         'site_hotel_phone': '',
         'site_hotel_email': '',
+        # Global business identity (shown as the PRIMARY brand on every dashboard).
+        'site_business_name': 'Grand Hotel',
+        'site_business_logo': '',
+        # Current branch identity (shown BESIDE the business name, based on the
+        # branch the guest/staff is logged into / checked into).
+        'site_branch_name': '',
+        'site_branch_logo': '',
     }
 
     # Currency / VAT / fallback identity are global (Site Settings).
@@ -76,19 +83,24 @@ def site_globals(request):
             'site_hotel_address': settings_obj.hotel_address,
             'site_hotel_phone': settings_obj.hotel_phone,
             'site_hotel_email': settings_obj.hotel_email,
+            # Business identity always comes from Site Settings (the company brand).
+            'site_business_name': settings_obj.hotel_name,
+            'site_business_logo': settings_obj.hotel_logo.url if settings_obj.hotel_logo else '',
         })
     except Exception:
         # Table may not exist yet (e.g. before migrations run).
         pass
 
-    # Hotel identity is per-branch: override the global defaults with the
-    # branch the current user is viewing.
+    # Branch identity is per-branch: the name/logo of the branch the current
+    # user is viewing / checked into. The business identity stays global.
     try:
         branch = _display_branch(request)
         if branch:
-            ctx['site_hotel_name'] = branch.name or ctx['site_hotel_name']
+            ctx['site_branch_name'] = branch.name or ''
             if branch.logo:
-                ctx['site_hotel_logo'] = branch.logo.url
+                ctx['site_branch_logo'] = branch.logo.url
+            # Keep the legacy `site_hotel_*` address/phone/email per-branch so
+            # invoices continue to show the operating branch's contact details.
             ctx['site_hotel_address'] = branch.address or ctx['site_hotel_address']
             ctx['site_hotel_phone'] = branch.phone or ctx['site_hotel_phone']
             ctx['site_hotel_email'] = branch.email or ctx['site_hotel_email']

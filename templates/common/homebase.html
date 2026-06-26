@@ -22,12 +22,12 @@
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <!-- Logo / Brand -->
             <a href="{% url 'home' %}" class="text-2xl font-bold flex items-center gap-2">
-                {% if site_hotel_logo %}
-                    <img src="{{ site_hotel_logo }}" alt="{{ site_hotel_name }}" class="h-8 w-auto">
+                {% if site_business_logo %}
+                    <img src="{{ site_business_logo }}" alt="{{ site_business_name }}" class="h-8 w-auto">
                 {% else %}
                     <i class="fa-solid fa-hotel"></i>
                 {% endif %}
-                <span>{{ site_hotel_name }}</span>
+                <span>{{ site_business_name }}</span>
             </a>
 
             <!-- Hamburger (mobile only) -->
@@ -120,7 +120,7 @@
 
     <!-- Footer -->
     <footer class="bg-gray-800 text-gray-400 py-6 text-center">
-        <p>&copy; 2025 {{ site_hotel_name }} System. All rights reserved.</p>
+        <p>&copy; 2025 {{ site_business_name }} System. All rights reserved.</p>
     </footer>
 
     <script>
