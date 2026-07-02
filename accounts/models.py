@@ -303,12 +303,46 @@ class Branch(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Per-branch payment / bank details. Guests booking THIS branch are shown
+    # these details, so it's clear which branch account received the payment.
+    pay_bank_name = models.CharField(max_length=100, blank=True)
+    pay_account_holder_name = models.CharField(max_length=100, blank=True)
+    pay_account_number = models.CharField(max_length=40, blank=True)
+    pay_ifsc_code = models.CharField(max_length=20, blank=True, verbose_name="IFSC / SWIFT code")
+    pay_bank_branch = models.CharField(max_length=100, blank=True, verbose_name="Bank branch")
+    pay_link = models.URLField(blank=True, null=True, help_text="Optional online payment link.")
+    pay_instructions = models.TextField(blank=True)
+
     class Meta:
         verbose_name_plural = "Branches"
         ordering = ['name']
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+
+    def has_payment_details(self):
+        """True when this branch has its own bank/payment details configured."""
+        return bool((self.pay_bank_name or '').strip() and (self.pay_account_number or '').strip())
+
+    def payment_details(self):
+        """
+        The bank/payment details to show a guest paying for THIS branch.
+        Uses the branch's own details when configured, otherwise falls back to
+        the global PaymentSetting so existing single-branch setups keep working.
+        The returned object exposes the same attribute names the templates use.
+        """
+        if self.has_payment_details():
+            from types import SimpleNamespace
+            return SimpleNamespace(
+                bank_name=self.pay_bank_name,
+                account_holder_name=self.pay_account_holder_name,
+                account_number=self.pay_account_number,
+                ifsc_code=self.pay_ifsc_code,
+                branch=self.pay_bank_branch,
+                payment_link=self.pay_link,
+                instructions=self.pay_instructions,
+            )
+        return PaymentSetting.load()
 
 
 # ---------------------------------------------------------------------------

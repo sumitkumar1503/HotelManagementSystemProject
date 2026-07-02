@@ -143,6 +143,32 @@ class EmployeeEditForm(forms.ModelForm):
         return user
 
 
+class StaffProfileForm(EmployeeEditForm):
+    """
+    Profile form a staff member uses to edit THEIR OWN account.
+    Staff must not be able to change the branch they are assigned to, so the
+    branch fields are removed and left untouched when saving.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop('branch', None)
+        self.fields.pop('assigned_branches', None)
+
+    def save(self, commit=True):
+        # Save the user's personal fields directly (skip EmployeeEditForm.save,
+        # which would try to reassign the branch).
+        user = forms.ModelForm.save(self, commit=commit)
+        if hasattr(user, 'employee_profile'):
+            profile = user.employee_profile
+            profile.job_type = self.cleaned_data['job_type']
+            profile.salary = self.cleaned_data['salary']
+            profile.id_card_number = self.cleaned_data['id_card_number']
+            profile.years_of_experience = self.cleaned_data['years_of_experience']
+            # NOTE: branch and assigned_branches are intentionally left unchanged.
+            profile.save()
+        return user
+
+
 class WalkInBookingForm(forms.Form):
     # Guest Details
     first_name = forms.CharField(max_length=30, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Guest First Name'}))
@@ -299,11 +325,20 @@ class RestockForm(forms.Form):
 class BranchForm(forms.ModelForm):
     class Meta:
         model = Branch
-        fields = ['name', 'code', 'logo', 'address', 'city', 'phone', 'email', 'is_active']
+        fields = ['name', 'code', 'logo', 'address', 'city', 'phone', 'email', 'is_active',
+                  'pay_bank_name', 'pay_account_holder_name', 'pay_account_number',
+                  'pay_ifsc_code', 'pay_bank_branch', 'pay_link', 'pay_instructions']
         labels = {
             'name': 'Hotel / Branch Name',
             'logo': 'Hotel Logo (shown in navbar, dashboard & invoice)',
             'address': 'Hotel Address (shown on invoice & website)',
+            'pay_bank_name': 'Bank Name',
+            'pay_account_holder_name': 'Account Holder Name',
+            'pay_account_number': 'Account Number',
+            'pay_ifsc_code': 'IFSC / SWIFT Code',
+            'pay_bank_branch': 'Bank Branch',
+            'pay_link': 'Online Payment Link (optional)',
+            'pay_instructions': 'Instructions for Guests',
         }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
@@ -314,6 +349,14 @@ class BranchForm(forms.ModelForm):
             'phone': forms.TextInput(attrs={'class': 'form-input'}),
             'email': forms.EmailInput(attrs={'class': 'form-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'pay_bank_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Global Trust Bank'}),
+            'pay_account_holder_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'pay_account_number': forms.TextInput(attrs={'class': 'form-input'}),
+            'pay_ifsc_code': forms.TextInput(attrs={'class': 'form-input'}),
+            'pay_bank_branch': forms.TextInput(attrs={'class': 'form-input'}),
+            'pay_link': forms.URLInput(attrs={'class': 'form-input', 'placeholder': 'https://...'}),
+            'pay_instructions': forms.Textarea(attrs={'class': 'form-input', 'rows': 3,
+                'placeholder': 'Please transfer the total booking amount to the account above and upload your payment receipt.'}),
         }
 
 

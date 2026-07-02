@@ -25,6 +25,26 @@
             </div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>{{ form.email }}</div>
             <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.is_active }} Active branch</label>
+
+            <!-- Per-branch payment / bank details -->
+            <div class="pt-5 mt-2 border-t">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="landmark" class="w-5 h-5 text-blue-600"></i> Payment / Bank Details
+                </h2>
+                <p class="text-xs text-gray-500 mb-4">Shown to guests who book <strong>this branch</strong> so payments land in the correct branch account.</p>
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">Bank Name</label>{{ form.pay_bank_name }}</div>
+                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">Account Holder Name</label>{{ form.pay_account_holder_name }}</div>
+                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">Account Number</label>{{ form.pay_account_number }}</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">IFSC / SWIFT Code</label>{{ form.pay_ifsc_code }}</div>
+                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">Bank Branch</label>{{ form.pay_bank_branch }}</div>
+                    </div>
+                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">Online Payment Link (optional)</label>{{ form.pay_link }}</div>
+                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">Instructions for Guests</label>{{ form.pay_instructions }}</div>
+                </div>
+            </div>
+
             <div class="pt-4 border-t flex gap-3">
                 <button type="submit" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition">Save Branch</button>
                 <a href="{% url 'manage_branches' %}" class="flex-1 text-center py-3 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition">Cancel</a>

@@ -92,6 +92,10 @@
                         <!-- We use the form field render but you can add classes manually in forms.py or here via widget tweaks. 
                              For simplicity, we let Django render the input widget but wrap it for layout. -->
                         {{ form.password1 }} 
+                        <button type="button" data-toggle-password="id_password1" title="Show / hide password"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-indigo-600 transition z-10">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
                     </div>
                     
                 </div>
@@ -103,6 +107,10 @@
                             <i class="fa-solid fa-lock"></i>
                         </div>
                         {{ form.password2 }}
+                        <button type="button" data-toggle-password="id_password2" title="Show / hide password"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-indigo-600 transition z-10">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -137,20 +145,38 @@
 
 <!-- Simple CSS to style the Django generated password inputs to match Tailwind if widgets aren't set in forms.py -->
 <style>
-    input[type="password"] {
+    input[type="password"], #id_password1, #id_password2 {
         width: 100%;
         padding-left: 2.5rem; /* Space for icon */
+        padding-right: 2.5rem; /* Space for show/hide eye */
         padding-top: 0.5rem;
         padding-bottom: 0.5rem;
         border-radius: 0.5rem;
         border: 1px solid #d1d5db;
     }
-    input[type="password"]:focus {
+    input[type="password"]:focus, #id_password1:focus, #id_password2:focus {
         outline: none;
         border-color: #6366f1;
         box-shadow: 0 0 0 1px #6366f1;
     }
     ul.errorlist { display: none; } /* Hide default django error list since we show custom one at top */
 </style>
+
+<script>
+  document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.getAttribute('data-toggle-password'));
+      if (!input) return;
+      var icon = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+      } else {
+        input.type = 'password';
+        if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+      }
+    });
+  });
+</script>
 
 {% endblock %}

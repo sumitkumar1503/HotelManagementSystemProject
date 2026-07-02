@@ -18,6 +18,7 @@ from accounts.models import (
 )
 from .forms import (
     BookingForm, CustomerEditForm, CustomerSignUpForm, EmployeeCreationForm, EmployeeEditForm,
+    StaffProfileForm,
     FoodItemForm, RoomForm, WalkInBookingForm, PaymentSettingForm, PaymentReceiptForm,
     DrinkForm, RestockForm, BranchForm, MessageForm, SiteSettingForm, ExpenseForm, WalletCreditForm,
     IngredientForm, IngredientRestockForm, LaundryServiceForm, RoomImageForm, SiteContentForm,
@@ -947,13 +948,13 @@ def housekeeping_profile(request):
     if request.method == 'POST':
         # Reuse the EmployeeEditForm but restrict it if needed
         # Or create a simpler profile form. For now, let's use a simple subset.
-        form = EmployeeEditForm(request.POST, request.FILES, instance=request.user)
+        form = StaffProfileForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, "Profile updated successfully!")
             return redirect('housekeeping_profile')
     else:
-        form = EmployeeEditForm(instance=request.user)
+        form = StaffProfileForm(instance=request.user)
         
     return render(request, 'housekeeping_panel/profile.html', {
         'form': form,
@@ -1173,13 +1174,13 @@ def kitchen_profile(request):
     employee_profile = request.user.employee_profile
     
     if request.method == 'POST':
-        form = EmployeeEditForm(request.POST, request.FILES, instance=request.user)
+        form = StaffProfileForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, "Chef profile updated successfully!")
             return redirect('kitchen_profile')
     else:
-        form = EmployeeEditForm(instance=request.user)
+        form = StaffProfileForm(instance=request.user)
         
     return render(request, 'kitchen_panel/profile.html', {
         'form': form,
@@ -1375,7 +1376,9 @@ def payment_settings(request):
 def pay_booking(request, booking_id):
     """Guest pays for a booking via wallet or bank transfer (with receipt upload)."""
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-    bank = PaymentSetting.load()
+    # Show the payment/bank details for the branch this booking belongs to, so
+    # the guest pays into the correct branch account.
+    bank = booking.branch.payment_details() if booking.branch else PaymentSetting.load()
     receipts = booking.receipts.all()
     room_subtotal = _money(_calculate_booking_amount(booking))
     vat_rate, vat_amount, amount_due = _apply_vat(room_subtotal)
@@ -1677,9 +1680,15 @@ def wallet_reload(request):
             return redirect('customer_wallet')
     else:
         form = WalletTopUpForm()
+    # Show the payment details for the branch of the guest's most recent booking
+    # (falls back to the global default when there is no branch on file).
+    last_branch_id = (Booking.objects.filter(user=request.user, branch__isnull=False)
+                      .order_by('-id').values_list('branch_id', flat=True).first())
+    branch = Branch.objects.filter(id=last_branch_id).first() if last_branch_id else None
+    payment_details = branch.payment_details() if branch else PaymentSetting.load()
     return render(request, 'customer_panel/wallet_reload.html', {
         'form': form, 'wallet': wallet,
-        'payment_settings': PaymentSetting.load(),
+        'payment_settings': payment_details,
     })
 
 
@@ -2038,13 +2047,13 @@ def bar_profile(request):
         return redirect('home')
     employee_profile = request.user.employee_profile
     if request.method == 'POST':
-        form = EmployeeEditForm(request.POST, request.FILES, instance=request.user)
+        form = StaffProfileForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, "Profile updated successfully!")
             return redirect('bar_profile')
     else:
-        form = EmployeeEditForm(instance=request.user)
+        form = StaffProfileForm(instance=request.user)
     return render(request, 'bar_panel/profile.html', {'form': form, 'employee': employee_profile})
 
 
